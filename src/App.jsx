@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { PHASES } from './utils/constants';
-import { getTotalRounds } from './utils/roundCalculations';
 import SetupScreen from './components/SetupScreen';
 import RoundHeader from './components/RoundHeader';
 import PreRoundScreen from './components/PreRoundScreen';
@@ -135,8 +134,7 @@ export default function App() {
   // Active game
   const round = gameState.rounds[gameState.currentRound];
   const dealer = gameState.players[round.dealerIndex];
-  const totalRounds = getTotalRounds(gameState.maxRounds, gameState.settings.roundDirection);
-  const isFinalRound = gameState.currentRound >= totalRounds - 1;
+  const isInExtraRounds = gameState.currentRound >= gameState.maxRounds;
 
   // Active players for this round
   const activePlayers = gameState.players.filter(p => p.addedInRound <= round.roundNumber);
@@ -165,7 +163,8 @@ export default function App() {
         <PreRoundScreen
           roundNumber={round.roundNumber}
           cardsDealt={round.cardsDealt}
-          totalRounds={totalRounds}
+          maxRounds={gameState.maxRounds}
+          isExtraRound={isInExtraRounds}
           players={activePlayers}
           dealerIndex={round.dealerIndex}
           totalScores={totalScores}
@@ -186,7 +185,6 @@ export default function App() {
           cardsDealt={round.cardsDealt}
           dealerName={dealer.name}
           trumpSuit={round.trumpSuit}
-          totalRounds={totalRounds}
         />
       )}
 
@@ -224,7 +222,6 @@ export default function App() {
           allRounds={gameState.rounds}
           totalScores={totalScores}
           isLastRound={gameState.isLastRound}
-          isFinalRound={isFinalRound}
           onNextRound={nextRound}
           onEndGame={endGame}
           onEditRound={() => editRound(gameState.currentRound)}

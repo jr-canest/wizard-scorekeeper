@@ -1,4 +1,4 @@
-export default function RoundScoreboard({ players, round, allRounds, totalScores, isLastRound, isFinalRound, onNextRound, onEndGame, onEditRound }) {
+export default function RoundScoreboard({ players, round, allRounds, totalScores, isLastRound, onNextRound, onEndGame, onEditRound }) {
   // Keep player order, don't sort
   const activePlayers = players.filter(p => p.id in round.scores);
 
@@ -132,7 +132,7 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
         >
           Edit Round
         </button>
-        {isLastRound || isFinalRound ? (
+        {isLastRound ? (
           <button
             onClick={onEndGame}
             className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold active:bg-green-500"
@@ -140,12 +140,20 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
             End Game
           </button>
         ) : (
-          <button
-            onClick={onNextRound}
-            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:bg-blue-500"
-          >
-            Next Round
-          </button>
+          <>
+            <button
+              onClick={onNextRound}
+              className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:bg-blue-500"
+            >
+              Next Round
+            </button>
+            <button
+              onClick={onEndGame}
+              className="py-3 px-4 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600 text-sm"
+            >
+              End Game
+            </button>
+          </>
         )}
       </div>
     </div>

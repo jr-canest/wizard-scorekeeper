@@ -4,24 +4,9 @@ export function getMaxRounds(numPlayers) {
   return Math.floor(DECK_SIZE / numPlayers);
 }
 
-export function getCardsForRound(roundIndex, maxRounds, roundDirection) {
-  if (roundDirection === 'ascending') {
-    return roundIndex + 1;
-  }
-  // ascending_descending: 1,2,...,max,...,2,1
-  if (roundIndex < maxRounds) {
-    return roundIndex + 1;
-  }
-  // descending phase
-  return 2 * maxRounds - roundIndex - 1;
-}
-
-export function getTotalRounds(maxRounds, roundDirection) {
-  if (roundDirection === 'ascending') {
-    return maxRounds;
-  }
-  // ascending_descending: max rounds up + (max-1) rounds down = 2*max - 1
-  return 2 * maxRounds - 1;
+export function getCardsForRound(roundIndex, maxRounds) {
+  // Rounds go 1, 2, 3, ..., maxRounds, maxRounds, maxRounds, ...
+  return Math.min(roundIndex + 1, maxRounds);
 }
 
 export function getDealerIndex(roundIndex, firstDealerIndex, numPlayers) {
@@ -47,10 +32,4 @@ export function getRestrictedBid(cardsDealt, bidsArray, canadianRules, isDealer,
     return restricted;
   }
   return null;
-}
-
-export function isNaturalNoTrumpRound(roundIndex, maxRounds, roundDirection) {
-  const cards = getCardsForRound(roundIndex, maxRounds, roundDirection);
-  const maxCards = maxRounds;
-  return cards === maxCards;
 }

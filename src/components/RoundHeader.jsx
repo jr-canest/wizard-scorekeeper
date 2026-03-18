@@ -1,6 +1,6 @@
 import { SUITS } from '../utils/constants';
 
-export default function RoundHeader({ roundNumber, cardsDealt, dealerName, trumpSuit, totalRounds }) {
+export default function RoundHeader({ roundNumber, cardsDealt, dealerName, trumpSuit }) {
   const suitInfo = trumpSuit && trumpSuit !== 'none' ? SUITS[trumpSuit] : null;
 
   return (
@@ -8,7 +8,7 @@ export default function RoundHeader({ roundNumber, cardsDealt, dealerName, trump
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-lg font-bold text-white">
-            Round {roundNumber}{totalRounds ? ` / ${totalRounds}` : ''}
+            Round {roundNumber}
           </h2>
           <p className="text-gray-400 text-sm">
             {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each

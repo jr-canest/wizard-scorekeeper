@@ -3,7 +3,8 @@ import { SUITS } from '../utils/constants';
 export default function PreRoundScreen({
   roundNumber,
   cardsDealt,
-  totalRounds,
+  maxRounds,
+  isExtraRound,
   players,
   dealerIndex,
   totalScores,
@@ -26,10 +27,11 @@ export default function PreRoundScreen({
       {/* Round info */}
       <div className="bg-gray-800 rounded-xl p-4 mb-4 text-center">
         <h2 className="text-xl font-bold text-white">
-          Round {roundNumber} / {totalRounds}
+          Round {roundNumber}
         </h2>
         <p className="text-gray-400 text-sm mt-1">
           {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each
+          {isExtraRound && <span className="text-amber-400 ml-1">(max cards)</span>}
         </p>
         {hasTrump && (
           <div className="mt-2">

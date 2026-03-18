@@ -11,7 +11,7 @@ export const NO_TRUMP = 'none';
 
 export const DECK_SIZE = 60;
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 10;
+export const MAX_PLAYERS = 12;
 
 export const PHASES = {
   PREROUND: 'preround',

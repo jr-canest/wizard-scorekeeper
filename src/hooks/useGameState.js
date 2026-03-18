@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { STORAGE_KEY, PHASES } from '../utils/constants';
-import { getMaxRounds, getTotalRounds, getCardsForRound, getDealerIndex } from '../utils/roundCalculations';
+import { getMaxRounds, getCardsForRound, getDealerIndex } from '../utils/roundCalculations';
 import { calculateRoundScores, calculateTotalScores } from '../utils/scoring';
 
 function loadState() {
@@ -51,9 +51,8 @@ export function useGameState() {
 
   const startGame = useCallback((players, settings) => {
     const maxRounds = getMaxRounds(players.length);
-    const totalRounds = getTotalRounds(maxRounds, settings.roundDirection);
     const dealerIndex = getDealerIndex(0, settings.firstDealerIndex, players.length);
-    const cardsDealt = getCardsForRound(0, maxRounds, settings.roundDirection);
+    const cardsDealt = getCardsForRound(0, maxRounds);
 
     const state = {
       players,
@@ -72,7 +71,6 @@ export function useGameState() {
         scores: {},
       }],
       maxRounds,
-      totalRounds,
     };
     persist(state);
   }, [persist]);
@@ -89,14 +87,12 @@ export function useGameState() {
     });
   }, []);
 
-  // Set trump from preround screen (optional)
   const setTrumpSuit = useCallback((suit) => {
     updateRound((round) => {
       round.trumpSuit = suit;
     });
   }, [updateRound]);
 
-  // Start the round (move from preround to bidding)
   const startRound = useCallback(() => {
     setGameState(prev => {
       const next = { ...prev, currentPhase: PHASES.BIDDING };
@@ -143,7 +139,7 @@ export function useGameState() {
       const next = { ...prev };
       const newRoundIndex = prev.currentRound + 1;
       const maxRounds = prev.maxRounds;
-      const cardsDealt = getCardsForRound(newRoundIndex, maxRounds, prev.settings.roundDirection);
+      const cardsDealt = getCardsForRound(newRoundIndex, maxRounds);
       const dealerIndex = getDealerIndex(newRoundIndex, prev.settings.firstDealerIndex, prev.players.length);
 
       next.currentRound = newRoundIndex;
@@ -167,7 +163,6 @@ export function useGameState() {
   const declareLastRound = useCallback((trumpChoice) => {
     setGameState(prev => {
       const next = { ...prev, isLastRound: true, lastRoundTrumpChoice: trumpChoice };
-      // If "without trump", also set the trump to none
       if (trumpChoice === 'without') {
         next.rounds = [...prev.rounds];
         const round = { ...next.rounds[next.currentRound] };
@@ -189,7 +184,6 @@ export function useGameState() {
       const next = { ...prev };
       next.players = [...prev.players, newPlayer];
       next.maxRounds = getMaxRounds(next.players.length);
-      next.totalRounds = getTotalRounds(next.maxRounds, next.settings.roundDirection);
       saveState(next);
       return next;
     });

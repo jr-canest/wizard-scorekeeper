@@ -32,6 +32,7 @@ export default function App() {
     editRound,
     goBackToBidding,
     endGame,
+    keepPlaying,
     newGame,
   } = useGameState();
 
@@ -72,62 +73,17 @@ export default function App() {
     return <SetupScreen onStartGame={startGame} />;
   }
 
-  // Game finished
+  // Game finished — reuse GameScoreboard with game-over actions
   if (gameState.currentPhase === 'finished') {
-    const sorted = [...gameState.players].sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
-    const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
     return (
-      <div className="p-4 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-white text-center mb-2">Game Over!</h1>
-        <p className="text-gray-400 text-center mb-6">Final Standings</p>
-
-        <div className="space-y-2 mb-8">
-          {sorted.map((player, i) => {
-            const total = totalScores[player.id] || 0;
-            return (
-              <div key={player.id} className={`flex items-center justify-between p-4 rounded-xl ${
-                i === 0 ? 'bg-amber-900/40 border border-amber-700' : 'bg-gray-800'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <span className={`text-lg font-bold ${i === 0 ? 'text-amber-400' : 'text-gray-500'}`}>
-                    {positions[i]}
-                  </span>
-                  <span className="text-white font-medium">{player.name}</span>
-                </div>
-                <span className={`text-lg font-bold ${
-                  total > 0 ? 'text-green-400' : total < 0 ? 'text-red-400' : 'text-gray-400'
-                }`}>
-                  {total}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowScoreboard(true)}
-            className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium"
-          >
-            Full Scoreboard
-          </button>
-          <button
-            onClick={newGame}
-            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold"
-          >
-            New Game
-          </button>
-        </div>
-
-        {showScoreboard && (
-          <GameScoreboard
-            players={gameState.players}
-            rounds={gameState.rounds}
-            totalScores={totalScores}
-            onClose={() => setShowScoreboard(false)}
-          />
-        )}
-      </div>
+      <GameScoreboard
+        players={gameState.players}
+        rounds={gameState.rounds}
+        totalScores={totalScores}
+        isGameOver
+        onKeepPlaying={keepPlaying}
+        onNewGame={newGame}
+      />
     );
   }
 
@@ -166,7 +122,7 @@ export default function App() {
           maxRounds={gameState.maxRounds}
           isExtraRound={isInExtraRounds}
           players={activePlayers}
-          dealerIndex={round.dealerIndex}
+          dealerId={dealer.id}
           totalScores={totalScores}
           trumpSuit={round.trumpSuit}
           isLastRound={gameState.isLastRound}
@@ -191,7 +147,7 @@ export default function App() {
       {gameState.currentPhase === PHASES.BIDDING && (
         <BiddingPhase
           players={activePlayers}
-          dealerIndex={round.dealerIndex}
+          dealerId={dealer.id}
           cardsDealt={round.cardsDealt}
           canadianRules={gameState.settings.canadianRules}
           roundNumber={round.roundNumber}
@@ -205,7 +161,7 @@ export default function App() {
       {gameState.currentPhase === PHASES.TRICKS && (
         <TricksPhase
           players={activePlayers}
-          dealerIndex={round.dealerIndex}
+          dealerId={dealer.id}
           cardsDealt={round.cardsDealt}
           bids={round.bids}
           tricks={round.tricks}
@@ -240,8 +196,8 @@ export default function App() {
 
       {showAddPlayer && (
         <AddPlayerModal
-          onAdd={(name) => {
-            addPlayerMidGame(name);
+          onAdd={(name, points) => {
+            addPlayerMidGame(name, points);
             setShowAddPlayer(false);
           }}
           onCancel={() => setShowAddPlayer(false)}
@@ -255,7 +211,6 @@ export default function App() {
             setTrumpSuit(suit);
             setShowTrumpPicker(false);
           }}
-          onCancel={() => setShowTrumpPicker(false)}
         />
       )}
 

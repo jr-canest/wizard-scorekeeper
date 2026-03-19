@@ -18,7 +18,7 @@ export function calculateRoundScores(bids, tricks) {
 export function calculateTotalScores(rounds, players) {
   const totals = {};
   for (const player of players) {
-    totals[player.id] = 0;
+    totals[player.id] = player.startingPoints || 0;
   }
   for (const round of rounds) {
     if (round.scores) {

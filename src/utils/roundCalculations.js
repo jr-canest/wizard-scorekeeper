@@ -13,11 +13,13 @@ export function getDealerIndex(roundIndex, firstDealerIndex, numPlayers) {
   return (firstDealerIndex + roundIndex) % numPlayers;
 }
 
-export function getBiddingOrder(dealerIndex, players) {
+export function getBiddingOrder(dealerId, players) {
+  const dealerIdx = players.findIndex(p => p.id === dealerId);
+  if (dealerIdx === -1) return [...players];
   const order = [];
   const n = players.length;
   for (let i = 1; i <= n; i++) {
-    order.push(players[(dealerIndex + i) % n]);
+    order.push(players[(dealerIdx + i) % n]);
   }
   return order;
 }

@@ -1,7 +1,7 @@
 import { getBiddingOrder } from '../utils/roundCalculations';
 
-export default function TricksPhase({ players, dealerIndex, cardsDealt, bids, tricks, onTrick, onConfirm, onBack }) {
-  const biddingOrder = getBiddingOrder(dealerIndex, players);
+export default function TricksPhase({ players, dealerId, cardsDealt, bids, tricks, onTrick, onConfirm, onBack }) {
+  const biddingOrder = getBiddingOrder(dealerId, players);
 
   const tricksAssigned = Object.values(tricks).reduce((s, t) => s + t, 0);
   const remaining = cardsDealt - tricksAssigned;

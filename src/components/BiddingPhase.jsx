@@ -1,7 +1,7 @@
 import { getBiddingOrder, getRestrictedBid } from '../utils/roundCalculations';
 
-export default function BiddingPhase({ players, dealerIndex, cardsDealt, canadianRules, roundNumber, bids, onBid, onConfirm, onBack }) {
-  const biddingOrder = getBiddingOrder(dealerIndex, players);
+export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, onBid, onConfirm, onBack }) {
+  const biddingOrder = getBiddingOrder(dealerId, players);
 
   const allBidsEntered = biddingOrder.every(p => p.id in bids);
   const totalBids = Object.values(bids).reduce((s, b) => s + b, 0);
@@ -68,41 +68,44 @@ export default function BiddingPhase({ players, dealerIndex, cardsDealt, canadia
         })}
       </div>
 
-      {/* Always show bid summary when at least one bid is entered */}
+      {/* Bid summary - always visible when any bids entered */}
       {bidsEntered > 0 && (
-        <div className="mt-4">
-          <div className={`text-center py-2 rounded-lg mb-3 text-sm font-medium ${
-            totalBids === cardsDealt
-              ? 'bg-amber-900/50 text-amber-300'
-              : totalBids > cardsDealt
-                ? 'bg-red-900/50 text-red-300'
-                : 'bg-blue-900/50 text-blue-300'
-          }`}>
-            {totalBids === cardsDealt
-              ? `Even — all bids could be met`
-              : totalBids > cardsDealt
-                ? `Overbid by ${totalBids - cardsDealt}`
-                : `Underbid by ${cardsDealt - totalBids}`
-            }
-          </div>
-          {allBidsEntered && (
-            <div className="flex gap-3">
-              <button
-                onClick={onBack}
-                className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600"
-              >
-                Back
-              </button>
-              <button
-                onClick={onConfirm}
-                className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:bg-blue-500"
-              >
-                Confirm Bids
-              </button>
-            </div>
-          )}
+        <div className={`text-center py-2 rounded-lg mt-4 mb-3 text-sm font-medium ${
+          totalBids === cardsDealt
+            ? 'bg-amber-900/50 text-amber-300'
+            : totalBids > cardsDealt
+              ? 'bg-red-900/50 text-red-300'
+              : 'bg-blue-900/50 text-blue-300'
+        }`}>
+          {totalBids === cardsDealt
+            ? `Even — all bids could be met`
+            : totalBids > cardsDealt
+              ? `Overbid by ${totalBids - cardsDealt}`
+              : `Underbid by ${cardsDealt - totalBids}`
+          }
         </div>
       )}
+
+      {/* Buttons always visible */}
+      <div className="flex gap-3 mt-3">
+        <button
+          onClick={onBack}
+          className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600"
+        >
+          Back
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={!allBidsEntered}
+          className={`flex-1 py-3 rounded-xl font-semibold ${
+            allBidsEntered
+              ? 'bg-blue-600 text-white active:bg-blue-500'
+              : 'bg-gray-700 text-gray-500'
+          }`}
+        >
+          Confirm Bids
+        </button>
+      </div>
     </div>
   );
 }

@@ -181,19 +181,26 @@ export default function SetupScreen({ onStartGame }) {
       <section className="mb-6 space-y-4">
         <h2 className="text-lg font-semibold text-white">Settings</h2>
 
-        <label className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3">
-          <span className="text-gray-200">Canadian Rules</span>
-          <div
-            onClick={() => setCanadianRules(!canadianRules)}
-            className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
-              canadianRules ? 'bg-blue-600' : 'bg-gray-600'
-            }`}
-          >
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-              canadianRules ? 'translate-x-5.5' : 'translate-x-0.5'
-            }`} />
-          </div>
-        </label>
+        <div className="bg-gray-800 rounded-lg px-4 py-3">
+          <label className="flex items-center justify-between">
+            <span className="text-gray-200">Canadian Rules</span>
+            <div
+              onClick={() => setCanadianRules(!canadianRules)}
+              className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
+                canadianRules ? 'bg-blue-600' : 'bg-gray-600'
+              }`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                canadianRules ? 'translate-x-5.5' : 'translate-x-0.5'
+              }`} />
+            </div>
+          </label>
+          {canadianRules && (
+            <p className="text-gray-500 text-xs mt-2">
+              Dealer's bid can't make total bids equal cards dealt (except round 1)
+            </p>
+          )}
+        </div>
       </section>
 
       <button

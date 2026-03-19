@@ -174,12 +174,13 @@ export function useGameState() {
     });
   }, []);
 
-  const addPlayerMidGame = useCallback((name) => {
+  const addPlayerMidGame = useCallback((name, startingPoints = 0) => {
     setGameState(prev => {
       const newPlayer = {
         id: crypto.randomUUID(),
         name,
-        addedInRound: prev.currentRound + 1,
+        addedInRound: prev.currentRound + 2, // will participate from next round
+        startingPoints,
       };
       const next = { ...prev };
       next.players = [...prev.players, newPlayer];
@@ -226,6 +227,14 @@ export function useGameState() {
     });
   }, []);
 
+  const keepPlaying = useCallback(() => {
+    setGameState(prev => {
+      const next = { ...prev, currentPhase: PHASES.SCORED, isLastRound: false };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
   const newGame = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     setGameState(null);
@@ -253,6 +262,7 @@ export function useGameState() {
     editRound,
     goBackToBidding,
     endGame,
+    keepPlaying,
     newGame,
   };
 }

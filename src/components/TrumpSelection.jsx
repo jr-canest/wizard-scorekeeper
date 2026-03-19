@@ -1,6 +1,6 @@
 import { SUITS, SUIT_ORDER, NO_TRUMP } from '../utils/constants';
 
-export default function TrumpSelection({ dealerName, onSelect, onCancel }) {
+export default function TrumpSelection({ dealerName, onSelect }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full">
@@ -38,10 +38,10 @@ export default function TrumpSelection({ dealerName, onSelect, onCancel }) {
           No Trump
         </button>
         <button
-          onClick={onCancel}
-          className="w-full py-2 text-gray-500 text-sm"
+          onClick={() => onSelect(null)}
+          className="w-full py-3 rounded-xl text-gray-500 text-sm bg-gray-700/50 active:bg-gray-700"
         >
-          Cancel
+          N/A — Clear selection
         </button>
       </div>
     </div>

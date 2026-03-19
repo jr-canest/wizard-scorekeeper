@@ -125,36 +125,27 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
         </div>
       )}
 
-      <div className="flex gap-3">
-        <button
-          onClick={onEditRound}
-          className="py-3 px-4 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600 text-sm"
-        >
-          Edit Round
-        </button>
-        {isLastRound ? (
+      <div className="space-y-2">
+        <div className="flex gap-3">
           <button
-            onClick={onEndGame}
-            className="flex-1 py-3 rounded-xl bg-green-600 text-white font-semibold active:bg-green-500"
+            onClick={onEditRound}
+            className="py-3 px-4 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600 text-sm"
           >
-            End Game
+            Edit Round
           </button>
-        ) : (
-          <>
-            <button
-              onClick={onNextRound}
-              className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:bg-blue-500"
-            >
-              Next Round
-            </button>
-            <button
-              onClick={onEndGame}
-              className="py-3 px-4 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600 text-sm"
-            >
-              End Game
-            </button>
-          </>
-        )}
+          <button
+            onClick={onNextRound}
+            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold active:bg-blue-500"
+          >
+            Next Round
+          </button>
+        </div>
+        <button
+          onClick={onEndGame}
+          className="w-full py-1.5 text-gray-500 text-xs active:text-gray-300"
+        >
+          End Game
+        </button>
       </div>
     </div>
   );

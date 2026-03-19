@@ -6,7 +6,7 @@ export default function PreRoundScreen({
   maxRounds,
   isExtraRound,
   players,
-  dealerIndex,
+  dealerId,
   totalScores,
   trumpSuit,
   isLastRound,
@@ -16,11 +16,20 @@ export default function PreRoundScreen({
   onDeclareLastRound,
   onAddPlayer,
 }) {
-  const dealer = players[dealerIndex];
-  // Keep seating order, don't sort by score
+  const dealer = players.find(p => p.id === dealerId) || players[0];
   const hasTrump = trumpSuit !== null;
   const suitInfo = trumpSuit && trumpSuit !== 'none' ? SUITS[trumpSuit] : null;
   const forceNoTrump = isLastRound && lastRoundTrumpChoice === 'without';
+
+  // Build trump button label
+  let trumpLabel = 'Select Trump';
+  if (hasTrump) {
+    if (suitInfo) {
+      trumpLabel = `Trump: ${suitInfo.symbol} ${suitInfo.name}`;
+    } else {
+      trumpLabel = 'Trump: No Trump';
+    }
+  }
 
   return (
     <div className="mb-4">
@@ -33,17 +42,6 @@ export default function PreRoundScreen({
           {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each
           {isExtraRound && <span className="text-amber-400 ml-1">(max cards)</span>}
         </p>
-        {hasTrump && (
-          <div className="mt-2">
-            {suitInfo ? (
-              <span className="font-semibold" style={{ color: suitInfo.color }}>
-                Trump: {suitInfo.symbol} {suitInfo.name}
-              </span>
-            ) : (
-              <span className="text-gray-500 font-semibold">No Trump</span>
-            )}
-          </div>
-        )}
       </div>
 
       {isLastRound && (
@@ -95,17 +93,23 @@ export default function PreRoundScreen({
           Start Round
         </button>
 
-        {/* Select Trump - only when needed (wizard/jester flipped) */}
+        {/* Trump button — shows current selection, always tappable to edit */}
         {!forceNoTrump && (
           <button
             onClick={onSelectTrump}
-            className={`w-full py-3 rounded-xl font-medium border ${
+            className={`w-full py-3 rounded-xl font-medium border active:bg-gray-700 ${
               hasTrump
-                ? 'bg-gray-800 text-gray-300 border-gray-700'
-                : 'bg-gray-800 text-gray-300 border-gray-700'
-            } active:bg-gray-700`}
+                ? 'bg-gray-800 border-gray-700'
+                : 'bg-gray-800 text-gray-400 border-gray-700'
+            }`}
           >
-            {hasTrump ? 'Change Trump' : 'Select Trump'}
+            {hasTrump && suitInfo ? (
+              <span style={{ color: suitInfo.color }}>{trumpLabel}</span>
+            ) : hasTrump ? (
+              <span className="text-gray-400">{trumpLabel}</span>
+            ) : (
+              <span className="text-gray-400">{trumpLabel}</span>
+            )}
           </button>
         )}
 

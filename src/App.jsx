@@ -30,6 +30,7 @@ export default function App() {
     declareLastRound,
     addPlayerMidGame,
     editRound,
+    goBackToPreround,
     goBackToBidding,
     endGame,
     keepPlaying,
@@ -154,7 +155,7 @@ export default function App() {
           bids={round.bids}
           onBid={setBid}
           onConfirm={confirmBids}
-          onBack={goBackToBidding}
+          onBack={goBackToPreround}
         />
       )}
 

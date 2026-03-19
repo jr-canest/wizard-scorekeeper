@@ -205,12 +205,25 @@ export function useGameState() {
     });
   }, []);
 
+  const goBackToPreround = useCallback(() => {
+    setGameState(prev => {
+      const next = { ...prev, currentPhase: PHASES.PREROUND };
+      next.rounds = [...prev.rounds];
+      const round = { ...next.rounds[next.currentRound] };
+      round.bids = {};
+      round.tricks = {};
+      round.scores = {};
+      next.rounds[next.currentRound] = round;
+      saveState(next);
+      return next;
+    });
+  }, []);
+
   const goBackToBidding = useCallback(() => {
     setGameState(prev => {
       const next = { ...prev, currentPhase: PHASES.BIDDING };
       next.rounds = [...prev.rounds];
       const round = { ...next.rounds[next.currentRound] };
-      round.bids = {};
       round.tricks = {};
       round.scores = {};
       next.rounds[next.currentRound] = round;
@@ -260,6 +273,7 @@ export function useGameState() {
     declareLastRound,
     addPlayerMidGame,
     editRound,
+    goBackToPreround,
     goBackToBidding,
     endGame,
     keepPlaying,

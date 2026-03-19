@@ -197,7 +197,7 @@ export default function SetupScreen({ onStartGame }) {
           </label>
           {canadianRules && (
             <p className="text-gray-500 text-xs mt-2">
-              Dealer's bid can't make total bids equal cards dealt (except round 1)
+              Dealer can't bid to make it even (except round 1)
             </p>
           )}
         </div>

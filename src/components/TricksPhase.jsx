@@ -1,12 +1,24 @@
+import { useState, useCallback } from 'react';
 import { getBiddingOrder } from '../utils/roundCalculations';
+import { playBooSound } from '../utils/sounds';
+import ConfirmDialog from './ConfirmDialog';
 
-export default function TricksPhase({ players, dealerId, cardsDealt, bids, tricks, onTrick, onConfirm, onBack }) {
+export default function TricksPhase({ players, dealerId, cardsDealt, bids, tricks, onTrick, onShame, onConfirm, onBack }) {
   const biddingOrder = getBiddingOrder(dealerId, players);
+  const [shameTarget, setShameTarget] = useState(null);
 
   const tricksAssigned = Object.values(tricks).reduce((s, t) => s + t, 0);
   const remaining = cardsDealt - tricksAssigned;
   const allTricksEntered = biddingOrder.every(p => p.id in tricks);
   const totalValid = allTricksEntered && tricksAssigned === cardsDealt;
+
+  const handleShameConfirm = useCallback(() => {
+    if (shameTarget) {
+      playBooSound();
+      onShame(shameTarget.id);
+      setShameTarget(null);
+    }
+  }, [shameTarget, onShame]);
 
   return (
     <div className="mb-4">
@@ -36,11 +48,20 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
                   {player.name}
                   <span className="text-navy-200 text-xs ml-1.5">(bid {bid})</span>
                 </span>
-                {hasTrick && (
-                  <span className="text-gold-200 text-sm">
-                    Won: {selectedTrick}/{bid}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {hasTrick && (
+                    <span className="text-gold-200 text-sm">
+                      Won: {selectedTrick}/{bid}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShameTarget(player)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-900/40 border border-red-700/40 text-red-400 active:bg-red-800/60 text-sm"
+                    title="Shame point"
+                  >
+                    ⚠️
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: cardsDealt + 1 }, (_, n) => {
@@ -90,6 +111,16 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
         <p className="text-red-400 text-sm text-center mt-2">
           Tricks total ({tricksAssigned}) must equal cards dealt ({cardsDealt})
         </p>
+      )}
+
+      {shameTarget && (
+        <ConfirmDialog
+          title="Shame! 💀"
+          message={`Give ${shameTarget.name} a shame point? This plays a loud sound!`}
+          confirmLabel="BOOO!"
+          onConfirm={handleShameConfirm}
+          onCancel={() => setShameTarget(null)}
+        />
       )}
     </div>
   );

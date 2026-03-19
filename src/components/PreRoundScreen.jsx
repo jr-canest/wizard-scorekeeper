@@ -18,6 +18,7 @@ export default function PreRoundScreen({
   onReorderPlayers,
   onDeclareLastRound,
   onAddPlayer,
+  onEndGame,
 }) {
   const dealer = players.find(p => p.id === dealerId) || players[0];
   const hasTrump = trumpSuit !== null;
@@ -188,6 +189,14 @@ export default function PreRoundScreen({
             + Add Player
           </button>
         </div>
+
+        {/* End Game — subtle link */}
+        <button
+          onClick={onEndGame}
+          className="w-full py-1.5 text-navy-200/50 text-xs active:text-gray-300"
+        >
+          End Game
+        </button>
       </div>
     </div>
   );

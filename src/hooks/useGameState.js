@@ -61,6 +61,7 @@ export function useGameState() {
       currentPhase: PHASES.PREROUND,
       isLastRound: false,
       lastRoundTrumpChoice: null,
+      shamePoints: {},
       rounds: [{
         roundNumber: 1,
         cardsDealt,
@@ -140,7 +141,10 @@ export function useGameState() {
       const newRoundIndex = prev.currentRound + 1;
       const maxRounds = prev.maxRounds;
       const cardsDealt = getCardsForRound(newRoundIndex, maxRounds);
-      const dealerIndex = getDealerIndex(newRoundIndex, prev.settings.firstDealerIndex, prev.players.length);
+      // Base next dealer on previous round's dealer + 1, not the formula
+      // This keeps rotation stable when players are added mid-game
+      const prevDealerIndex = prev.rounds[prev.currentRound].dealerIndex;
+      const dealerIndex = (prevDealerIndex + 1) % prev.players.length;
 
       next.currentRound = newRoundIndex;
       next.currentPhase = PHASES.PREROUND;
@@ -197,6 +201,15 @@ export function useGameState() {
       const [moved] = players.splice(fromIndex, 1);
       players.splice(toIndex, 0, moved);
       next.players = players;
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const addShamePoint = useCallback((playerId) => {
+    setGameState(prev => {
+      const next = { ...prev };
+      next.shamePoints = { ...prev.shamePoints, [playerId]: (prev.shamePoints?.[playerId] || 0) + 1 };
       saveState(next);
       return next;
     });
@@ -285,6 +298,7 @@ export function useGameState() {
     declareLastRound,
     addPlayerMidGame,
     reorderPlayers,
+    addShamePoint,
     editRound,
     goBackToPreround,
     goBackToBidding,

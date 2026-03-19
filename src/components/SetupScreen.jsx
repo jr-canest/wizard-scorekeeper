@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../utils/constants';
 import { getMaxRounds } from '../utils/roundCalculations';
+import { searchPlayers } from '../utils/firebase';
 
-export default function SetupScreen({ onStartGame }) {
+export default function SetupScreen({ onStartGame, onShowHistory }) {
   const [players, setPlayers] = useState([
     { id: crypto.randomUUID(), name: '' },
     { id: crypto.randomUUID(), name: '' },
@@ -11,6 +12,36 @@ export default function SetupScreen({ onStartGame }) {
   const [canadianRules, setCanadianRules] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
   const listRef = useRef(null);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [activeInputIndex, setActiveInputIndex] = useState(null);
+  const debounceRef = useRef(null);
+
+  const handleNameSearch = useCallback((index, value) => {
+    setActiveInputIndex(index);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!value || value.trim().length < 1) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchPlayers(value, 5);
+        // Filter out names already used by other players
+        const usedNames = new Set(players.filter((_, i) => i !== index).map(p => p.name.trim().toLowerCase()));
+        const filtered = results.filter(r => !usedNames.has(r.nameLower));
+        setSuggestions(filtered);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 200);
+  }, [players]);
+
+  const selectSuggestion = useCallback((index, name) => {
+    updateName(index, name);
+    setSuggestions([]);
+    setActiveInputIndex(null);
+  }, []);
 
   const namedPlayers = players.filter(p => p.name.trim());
   const canStart = namedPlayers.length >= MIN_PLAYERS && firstDealerIndex < players.length && players[firstDealerIndex]?.name.trim();
@@ -140,14 +171,41 @@ export default function SetupScreen({ onStartGame }) {
               <div className="text-gold-200/50 cursor-grab active:cursor-grabbing px-1 text-lg touch-none">
                 ⠿
               </div>
-              <input
-                type="text"
-                value={player.name}
-                onChange={e => updateName(i, e.target.value)}
-                placeholder={`Player ${i + 1}`}
-                className="flex-1 bg-navy-800/60 border border-gold-700/60 rounded-lg px-3 py-2.5 text-white placeholder-navy-200/50 focus:border-gold-300 focus:outline-none select-text"
-                maxLength={20}
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={player.name}
+                  onChange={e => {
+                    updateName(i, e.target.value);
+                    handleNameSearch(i, e.target.value);
+                  }}
+                  onFocus={() => handleNameSearch(i, player.name)}
+                  onBlur={() => setTimeout(() => {
+                    if (activeInputIndex === i) {
+                      setSuggestions([]);
+                      setActiveInputIndex(null);
+                    }
+                  }, 150)}
+                  placeholder={`Player ${i + 1}`}
+                  className="w-full bg-navy-800/60 border border-gold-700/60 rounded-lg px-3 py-2.5 text-white placeholder-navy-200/50 focus:border-gold-300 focus:outline-none select-text"
+                  maxLength={20}
+                  autoComplete="off"
+                />
+                {activeInputIndex === i && suggestions.length > 0 && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-navy-800 border border-gold-700/50 rounded-lg overflow-hidden shadow-lg">
+                    {suggestions.map(s => (
+                      <button
+                        key={s.id}
+                        onMouseDown={() => selectSuggestion(i, s.name)}
+                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
+                      >
+                        <span>{s.name}</span>
+                        <span className="text-navy-200/50 text-xs">{s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setFirstDealerIndex(i)}
                 className={`px-2 py-1 rounded-lg text-sm font-medium shrink-0 flex flex-col items-center min-w-[52px] ${
@@ -225,6 +283,15 @@ export default function SetupScreen({ onStartGame }) {
       >
         Start Game
       </button>
+
+      {onShowHistory && (
+        <button
+          onClick={onShowHistory}
+          className="w-full mt-3 py-2.5 rounded-xl text-sm font-medium text-gold-200 border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
+        >
+          📜 Player History
+        </button>
+      )}
     </div>
   );
 }

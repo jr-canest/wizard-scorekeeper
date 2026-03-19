@@ -11,6 +11,7 @@ import RoundScoreboard from './components/RoundScoreboard';
 import GameScoreboard from './components/GameScoreboard';
 import AddPlayerModal from './components/AddPlayerModal';
 import ConfirmDialog from './components/ConfirmDialog';
+import HistoryScreen from './components/HistoryScreen';
 
 function WizardLogo({ className = "h-8" }) {
   return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
@@ -34,6 +35,7 @@ export default function App() {
     declareLastRound,
     addPlayerMidGame,
     reorderPlayers,
+    addShamePoint,
     editRound,
     goBackToPreround,
     goBackToBidding,
@@ -46,7 +48,9 @@ export default function App() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showLastRound, setShowLastRound] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showTrumpPicker, setShowTrumpPicker] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Resume game prompt
   if (!gameState && hasSavedGame) {
@@ -77,20 +81,30 @@ export default function App() {
 
   // Setup screen
   if (!gameState) {
-    return <SetupScreen onStartGame={startGame} />;
+    return (
+      <>
+        <SetupScreen onStartGame={startGame} onShowHistory={() => setShowHistory(true)} />
+        {showHistory && <HistoryScreen onClose={() => setShowHistory(false)} />}
+      </>
+    );
   }
 
   // Game finished — reuse GameScoreboard with game-over actions
   if (gameState.currentPhase === 'finished') {
     return (
-      <GameScoreboard
-        players={gameState.players}
-        rounds={gameState.rounds}
-        totalScores={totalScores}
-        isGameOver
-        onKeepPlaying={keepPlaying}
-        onNewGame={newGame}
-      />
+      <>
+        <GameScoreboard
+          players={gameState.players}
+          rounds={gameState.rounds}
+          totalScores={totalScores}
+          shamePoints={gameState.shamePoints}
+          isGameOver
+          onKeepPlaying={keepPlaying}
+          onNewGame={newGame}
+          onShowHistory={() => setShowHistory(true)}
+        />
+        {showHistory && <HistoryScreen onClose={() => setShowHistory(false)} />}
+      </>
     );
   }
 
@@ -140,6 +154,7 @@ export default function App() {
           onReorderPlayers={reorderPlayers}
           onDeclareLastRound={() => setShowLastRound(true)}
           onAddPlayer={() => setShowAddPlayer(true)}
+          onEndGame={() => setShowEndGameConfirm(true)}
         />
       )}
 
@@ -161,7 +176,9 @@ export default function App() {
           canadianRules={gameState.settings.canadianRules}
           roundNumber={round.roundNumber}
           bids={round.bids}
+          shamePoints={gameState.shamePoints}
           onBid={setBid}
+          onShame={addShamePoint}
           onConfirm={confirmBids}
           onBack={goBackToPreround}
         />
@@ -174,7 +191,9 @@ export default function App() {
           cardsDealt={round.cardsDealt}
           bids={round.bids}
           tricks={round.tricks}
+          shamePoints={gameState.shamePoints}
           onTrick={setTricks}
+          onShame={addShamePoint}
           onConfirm={confirmTricks}
           onBack={goBackToBidding}
         />
@@ -186,6 +205,7 @@ export default function App() {
           round={round}
           allRounds={gameState.rounds}
           totalScores={totalScores}
+          shamePoints={gameState.shamePoints}
           isLastRound={gameState.isLastRound}
           onNextRound={nextRound}
           onEndGame={endGame}
@@ -199,9 +219,13 @@ export default function App() {
           players={gameState.players}
           rounds={gameState.rounds}
           totalScores={totalScores}
+          shamePoints={gameState.shamePoints}
           onClose={() => setShowScoreboard(false)}
+          onShowHistory={() => setShowHistory(true)}
         />
       )}
+
+      {showHistory && <HistoryScreen onClose={() => setShowHistory(false)} />}
 
       {showAddPlayer && (
         <AddPlayerModal
@@ -250,6 +274,16 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {showEndGameConfirm && (
+        <ConfirmDialog
+          title="End Game?"
+          message="This will end the current game and show final scores. Are you sure?"
+          confirmLabel="End Game"
+          onConfirm={() => { endGame(); setShowEndGameConfirm(false); }}
+          onCancel={() => setShowEndGameConfirm(false)}
+        />
       )}
 
       {showNewGameConfirm && (

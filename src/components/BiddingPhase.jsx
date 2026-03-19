@@ -1,11 +1,23 @@
+import { useState, useCallback } from 'react';
 import { getBiddingOrder, getRestrictedBid } from '../utils/roundCalculations';
+import ConfirmDialog from './ConfirmDialog';
+import { playBooSound } from '../utils/sounds';
 
-export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, onBid, onConfirm, onBack }) {
+export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, shamePoints, onBid, onShame, onConfirm, onBack }) {
   const biddingOrder = getBiddingOrder(dealerId, players);
+  const [shameTarget, setShameTarget] = useState(null);
 
   const allBidsEntered = biddingOrder.every(p => p.id in bids);
   const totalBids = Object.values(bids).reduce((s, b) => s + b, 0);
   const bidsEntered = Object.keys(bids).length;
+
+  const handleShameConfirm = useCallback(() => {
+    if (shameTarget) {
+      playBooSound();
+      onShame(shameTarget.id);
+      setShameTarget(null);
+    }
+  }, [shameTarget, onShame]);
 
   return (
     <div className="mb-4">
@@ -37,9 +49,18 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
                   {player.name}
                   {isDealer && <span className="text-gold-200 text-xs ml-1.5">(Dealer)</span>}
                 </span>
-                {hasBid && (
-                  <span className="text-gold-200 text-sm">Bid: {selectedBid}</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {hasBid && (
+                    <span className="text-gold-200 text-sm">Bid: {selectedBid}</span>
+                  )}
+                  <button
+                    onClick={() => setShameTarget(player)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-900/40 border border-red-700/40 text-red-400 active:bg-red-800/60 text-sm"
+                    title="Shame point"
+                  >
+                    ⚠️
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: cardsDealt + 1 }, (_, n) => {
@@ -102,6 +123,16 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
           Confirm Bids
         </button>
       </div>
+
+      {shameTarget && (
+        <ConfirmDialog
+          title="Shame! 💀"
+          message={`Give ${shameTarget.name} a shame point? This plays a loud sound!`}
+          confirmLabel="BOOO!"
+          onConfirm={handleShameConfirm}
+          onCancel={() => setShameTarget(null)}
+        />
+      )}
     </div>
   );
 }

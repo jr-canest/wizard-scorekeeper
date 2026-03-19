@@ -1,4 +1,4 @@
-export default function RoundScoreboard({ players, round, allRounds, totalScores, isLastRound, onNextRound, onEndGame, onEditRound }) {
+export default function RoundScoreboard({ players, round, allRounds, totalScores, shamePoints, isLastRound, onNextRound, onEndGame, onEditRound }) {
   // Keep player order, don't sort
   const activePlayers = players.filter(p => p.id in round.scores);
 
@@ -52,7 +52,14 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
 
               return (
                 <tr key={player.id} className="border-b border-gold-700/20 last:border-0">
-                  <td className="py-2.5 px-3 text-white font-medium">{player.name}</td>
+                  <td className="py-2.5 px-3 text-white font-medium">
+                    {player.name}
+                    {(shamePoints?.[player.id] || 0) > 0 && (
+                      <span className="text-red-400 text-xs font-bold ml-1.5" title={`${shamePoints[player.id]} shame point${shamePoints[player.id] !== 1 ? 's' : ''}`}>
+                        {'💀'.repeat(Math.min(shamePoints[player.id], 5))}{shamePoints[player.id] > 5 ? `×${shamePoints[player.id]}` : ''}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2.5 px-3 text-center text-gray-300">{bid}</td>
                   <td className="py-2.5 px-3 text-center text-gray-300">{tricks}</td>
                   <td className="py-2.5 px-3 text-right">

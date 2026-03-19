@@ -1,7 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getGameSummary } from '../utils/gameSummary';
+import { playSparkleSound } from '../utils/sounds';
+import { saveGameResult } from '../utils/firebase';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
+
+function WhiteWipe() {
+  return (
+    <div className="fixed inset-0 z-[60] pointer-events-none">
+      <style>{`
+        @keyframes wipe-in {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+        .white-wipe {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg,
+            transparent 0%,
+            rgba(255,255,255,0.3) 10%,
+            rgba(255,255,255,0.95) 30%,
+            white 50%,
+            rgba(255,255,255,0.95) 70%,
+            rgba(255,255,255,0.3) 90%,
+            transparent 100%
+          );
+          animation: wipe-in 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+        }
+      `}</style>
+      <div className="white-wipe" />
+    </div>
+  );
+}
+
+const sparkleEmojis = ['🪄', '⭐', '✨'];
 
 function Sparkles() {
   const [sparkles] = useState(() =>
@@ -9,10 +41,10 @@ function Sparkles() {
       id: i,
       left: 5 + Math.random() * 90,
       top: 5 + Math.random() * 85,
-      delay: Math.random() * 3,
+      delay: Math.random() * 2,
       duration: 0.6 + Math.random() * 0.8,
-      size: 4 + Math.random() * 8,
-      rotation: Math.random() * 360,
+      size: 20 + Math.random() * 24,
+      emoji: sparkleEmojis[i % sparkleEmojis.length],
     }))
   );
 
@@ -20,34 +52,17 @@ function Sparkles() {
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       <style>{`
         @keyframes sparkle-pop {
-          0% { transform: scale(0) rotate(var(--rot)); opacity: 0; }
-          20% { transform: scale(1.3) rotate(calc(var(--rot) + 30deg)); opacity: 1; }
-          50% { transform: scale(0.9) rotate(calc(var(--rot) + 60deg)); opacity: 0.9; }
-          70% { transform: scale(1.1) rotate(calc(var(--rot) + 90deg)); opacity: 0.7; }
-          100% { transform: scale(0) rotate(calc(var(--rot) + 180deg)); opacity: 0; }
+          0% { transform: scale(0); opacity: 0; }
+          20% { transform: scale(1.3); opacity: 1; }
+          50% { transform: scale(0.9); opacity: 0.9; }
+          70% { transform: scale(1.1); opacity: 0.7; }
+          100% { transform: scale(0); opacity: 0; }
         }
         .sparkle {
           position: absolute;
           animation: sparkle-pop var(--dur) ease-in-out var(--delay) both;
           animation-iteration-count: 2;
-        }
-        .sparkle::before, .sparkle::after {
-          content: '';
-          position: absolute;
-          background: linear-gradient(135deg, #fecd46, #fff, #fecd46);
-          border-radius: 2px;
-        }
-        .sparkle::before {
-          width: 100%;
-          height: 30%;
-          top: 35%;
-          left: 0;
-        }
-        .sparkle::after {
-          width: 30%;
-          height: 100%;
-          top: 0;
-          left: 35%;
+          line-height: 1;
         }
       `}</style>
       {sparkles.map(s => (
@@ -57,30 +72,65 @@ function Sparkles() {
           style={{
             left: `${s.left}%`,
             top: `${s.top}%`,
-            width: s.size,
-            height: s.size,
+            fontSize: s.size,
             '--delay': `${s.delay}s`,
             '--dur': `${s.duration}s`,
-            '--rot': `${s.rotation}deg`,
           }}
-        />
+        >
+          {s.emoji}
+        </div>
       ))}
     </div>
   );
 }
 
-export default function GameScoreboard({ players, rounds, totalScores, onClose, isGameOver, onKeepPlaying, onNewGame }) {
+export default function GameScoreboard({ players, rounds, totalScores, shamePoints, onClose, isGameOver, onKeepPlaying, onNewGame, onShowHistory }) {
   const sortedPlayers = [...players].sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
   const completedRounds = rounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
   const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
   const [showSparkles, setShowSparkles] = useState(false);
+  const [showWipe, setShowWipe] = useState(false);
+  const [contentVisible, setContentVisible] = useState(!isGameOver);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const hasSaved = useRef(false);
 
   useEffect(() => {
     if (isGameOver) {
+      setShowWipe(true);
       setShowSparkles(true);
-      const timer = setTimeout(() => setShowSparkles(false), 4000);
-      return () => clearTimeout(timer);
+      playSparkleSound();
+      const contentTimer = setTimeout(() => setContentVisible(true), 500);
+      const wipeTimer = setTimeout(() => setShowWipe(false), 1100);
+      const sparkleEnd = setTimeout(() => setShowSparkles(false), 3000);
+
+      // Save game to Firebase (once)
+      if (!hasSaved.current) {
+        hasSaved.current = true;
+        setSaveStatus('saving');
+        const playerResults = sortedPlayers.map((player) => {
+          const total = totalScores[player.id] || 0;
+          const rank = sortedPlayers.findIndex(p => (totalScores[p.id] || 0) === total);
+          return {
+            name: player.name,
+            score: total,
+            rank: rank + 1,
+            shamePoints: shamePoints?.[player.id] || 0,
+          };
+        });
+        saveGameResult(playerResults, completedRounds.length)
+          .then(() => setSaveStatus('saved'))
+          .catch((err) => {
+            console.error('Failed to save game:', err);
+            setSaveStatus('error');
+          });
+      }
+
+      return () => {
+        clearTimeout(contentTimer);
+        clearTimeout(wipeTimer);
+        clearTimeout(sparkleEnd);
+      };
     }
   }, [isGameOver]);
 
@@ -112,22 +162,48 @@ export default function GameScoreboard({ players, rounds, totalScores, onClose, 
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}
       style={{ background: 'linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%)' }}>
 
+      {showWipe && <WhiteWipe />}
       {showSparkles && <Sparkles />}
 
-      <div className="p-4 max-w-lg mx-auto">
+      <div className={`p-4 max-w-lg mx-auto transition-opacity duration-700 ${
+        isGameOver && !contentVisible ? 'opacity-0' : 'opacity-100'
+      }`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">
-            {isGameOver ? 'Game Over!' : 'Scoreboard'}
-          </h2>
-          {!isGameOver && (
-            <button
-              onClick={onClose}
-              className="text-navy-200 text-2xl active:text-white px-2"
-            >
-              ✕
-            </button>
-          )}
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              {isGameOver ? 'Game Over!' : 'Scoreboard'}
+            </h2>
+            {isGameOver && saveStatus && (
+              <p className={`text-xs mt-0.5 ${
+                saveStatus === 'saving' ? 'text-navy-200/50' :
+                saveStatus === 'saved' ? 'text-green-400/60' :
+                'text-red-400/60'
+              }`}>
+                {saveStatus === 'saving' ? 'Saving to history...' :
+                 saveStatus === 'saved' ? '✓ Saved to history' :
+                 '✗ Could not save'}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {onShowHistory && (
+              <button
+                onClick={onShowHistory}
+                className="text-gold-200 text-sm font-medium px-3 py-1.5 rounded-lg border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
+              >
+                History
+              </button>
+            )}
+            {!isGameOver && (
+              <button
+                onClick={onClose}
+                className="text-navy-200 text-2xl active:text-white px-2"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Game summary */}
@@ -162,6 +238,11 @@ export default function GameScoreboard({ players, rounds, totalScores, onClose, 
                     {medal || positions[rank]}
                   </span>
                   <span className="text-white font-medium">{player.name}</span>
+                  {(shamePoints?.[player.id] || 0) > 0 && (
+                    <span className="text-red-400 text-xs font-bold" title={`${shamePoints[player.id]} shame point${shamePoints[player.id] !== 1 ? 's' : ''}`}>
+                      💀{shamePoints[player.id] > 1 ? `×${shamePoints[player.id]}` : ''}
+                    </span>
+                  )}
                 </div>
                 <span className={`font-bold text-lg ${
                   total > 0 ? 'text-green-400' : total < 0 ? 'text-red-400' : 'text-navy-200'

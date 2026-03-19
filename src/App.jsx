@@ -12,6 +12,10 @@ import GameScoreboard from './components/GameScoreboard';
 import AddPlayerModal from './components/AddPlayerModal';
 import ConfirmDialog from './components/ConfirmDialog';
 
+function WizardLogo({ className = "h-8" }) {
+  return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
+}
+
 export default function App() {
   const {
     gameState,
@@ -29,6 +33,7 @@ export default function App() {
     nextRound,
     declareLastRound,
     addPlayerMidGame,
+    reorderPlayers,
     editRound,
     goBackToPreround,
     goBackToBidding,
@@ -47,19 +52,20 @@ export default function App() {
   if (!gameState && hasSavedGame) {
     return (
       <div className="min-h-svh flex items-center justify-center p-4">
-        <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full text-center">
+        <div className="card-gold p-6 max-w-sm w-full text-center">
+          <WizardLogo className="h-10 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Game in Progress</h2>
-          <p className="text-gray-400 mb-6">Resume your previous game?</p>
+          <p className="text-navy-200 mb-6">Resume your previous game?</p>
           <div className="flex gap-3">
             <button
               onClick={dismissSavedGame}
-              className="flex-1 py-3 rounded-lg bg-gray-700 text-gray-300 font-medium active:bg-gray-600"
+              className="flex-1 py-3 rounded-lg bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
             >
               New Game
             </button>
             <button
               onClick={resumeGame}
-              className="flex-1 py-3 rounded-lg bg-blue-600 text-white font-medium active:bg-blue-500"
+              className="btn-gold flex-1 py-3 rounded-lg"
             >
               Resume
             </button>
@@ -102,14 +108,14 @@ export default function App() {
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setShowNewGameConfirm(true)}
-          className="text-gray-400 text-sm active:text-white"
+          className="text-navy-200/60 text-sm active:text-gray-300"
         >
           New Game
         </button>
-        <h1 className="text-lg font-bold text-white">Wizard</h1>
+        <WizardLogo className="h-7" />
         <button
           onClick={() => setShowScoreboard(true)}
-          className="bg-blue-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg active:bg-blue-500"
+          className="text-gold-200 text-sm font-medium px-3 py-1.5 rounded-lg border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
         >
           Scoreboard
         </button>
@@ -130,6 +136,8 @@ export default function App() {
           lastRoundTrumpChoice={gameState.lastRoundTrumpChoice}
           onStartRound={startRound}
           onSelectTrump={() => setShowTrumpPicker(true)}
+          allPlayers={gameState.players}
+          onReorderPlayers={reorderPlayers}
           onDeclareLastRound={() => setShowLastRound(true)}
           onAddPlayer={() => setShowAddPlayer(true)}
         />
@@ -216,26 +224,26 @@ export default function App() {
       )}
 
       {showLastRound && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-semibold text-white mb-2">Declare Last Round</h3>
             <p className="text-gray-300 text-sm mb-4">This round will be the final round. Play with or without trump?</p>
             <div className="space-y-2">
               <button
                 onClick={() => { declareLastRound('with'); setShowLastRound(false); }}
-                className="w-full py-3 rounded-lg bg-blue-600 text-white font-medium"
+                className="btn-gold w-full py-3 rounded-lg"
               >
                 With Trump
               </button>
               <button
                 onClick={() => { declareLastRound('without'); setShowLastRound(false); }}
-                className="w-full py-3 rounded-lg bg-gray-700 text-gray-300 font-medium"
+                className="w-full py-3 rounded-lg bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
               >
                 Without Trump
               </button>
               <button
                 onClick={() => setShowLastRound(false)}
-                className="w-full py-2 text-gray-500 text-sm"
+                className="w-full py-2 text-navy-200/60 text-sm"
               >
                 Cancel
               </button>

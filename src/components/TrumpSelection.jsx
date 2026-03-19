@@ -2,13 +2,13 @@ import { SUITS, SUIT_ORDER, NO_TRUMP } from '../utils/constants';
 
 export default function TrumpSelection({ dealerName, onSelect }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-xl p-6 max-w-sm w-full">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-5 max-w-sm w-full">
         <h3 className="text-lg font-semibold text-white mb-3 text-center">Select Trump</h3>
 
-        <div className="bg-gray-700/50 rounded-lg p-3 mb-4 text-sm space-y-1">
+        <div className="bg-navy-700 border border-gold-700/30 rounded-lg p-3 mb-4 text-sm space-y-1">
           <p className="text-gray-300">
-            <span className="text-amber-400 font-medium">Wizard</span> — {dealerName} chooses
+            <span className="text-gold-200 font-medium">Wizard</span> — {dealerName} chooses
           </p>
           <p className="text-gray-300">
             <span className="text-blue-400 font-medium">Jester</span> — No trump
@@ -22,7 +22,7 @@ export default function TrumpSelection({ dealerName, onSelect }) {
               <button
                 key={suit}
                 onClick={() => onSelect(suit)}
-                className="py-4 rounded-xl bg-gray-700 active:bg-gray-600 flex items-center justify-center gap-2 text-lg font-semibold border border-gray-600"
+                className="py-4 rounded-xl bg-navy-700 active:bg-navy-600 flex items-center justify-center gap-2 text-lg font-semibold border border-gold-700/30"
                 style={{ color: info.color }}
               >
                 <span className="text-2xl">{info.symbol}</span>
@@ -33,13 +33,13 @@ export default function TrumpSelection({ dealerName, onSelect }) {
         </div>
         <button
           onClick={() => onSelect(NO_TRUMP)}
-          className="w-full py-4 rounded-xl font-semibold text-lg bg-gray-700 text-gray-400 border border-gray-600 active:bg-gray-600 mb-3"
+          className="w-full py-4 rounded-xl font-semibold text-lg bg-navy-700 text-navy-100 border border-gold-700/30 active:bg-navy-600 mb-3"
         >
           No Trump
         </button>
         <button
           onClick={() => onSelect(null)}
-          className="w-full py-3 rounded-xl text-gray-500 text-sm bg-gray-700/50 active:bg-gray-700"
+          className="w-full py-3 rounded-xl text-navy-200/60 text-sm bg-navy-700/50 active:bg-navy-600"
         >
           N/A — Clear selection
         </button>

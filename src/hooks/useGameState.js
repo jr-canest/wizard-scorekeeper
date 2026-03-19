@@ -179,12 +179,24 @@ export function useGameState() {
       const newPlayer = {
         id: crypto.randomUUID(),
         name,
-        addedInRound: prev.currentRound + 2, // will participate from next round
+        addedInRound: prev.rounds[prev.currentRound].roundNumber, // joins current round
         startingPoints,
       };
       const next = { ...prev };
       next.players = [...prev.players, newPlayer];
       next.maxRounds = getMaxRounds(next.players.length);
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const reorderPlayers = useCallback((fromIndex, toIndex) => {
+    setGameState(prev => {
+      const next = { ...prev };
+      const players = [...prev.players];
+      const [moved] = players.splice(fromIndex, 1);
+      players.splice(toIndex, 0, moved);
+      next.players = players;
       saveState(next);
       return next;
     });
@@ -272,6 +284,7 @@ export function useGameState() {
     nextRound,
     declareLastRound,
     addPlayerMidGame,
+    reorderPlayers,
     editRound,
     goBackToPreround,
     goBackToBidding,

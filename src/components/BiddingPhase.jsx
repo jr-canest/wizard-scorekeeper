@@ -11,7 +11,7 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
     <div className="mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-white font-semibold">Bidding</h3>
-        <span className="text-gray-400 text-sm">
+        <span className="text-navy-200 text-sm">
           Total: {totalBids} / {cardsDealt}
         </span>
       </div>
@@ -31,14 +31,14 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
             : null;
 
           return (
-            <div key={player.id} className="bg-gray-800 rounded-xl p-3">
+            <div key={player.id} className="card-gold p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white font-medium">
                   {player.name}
-                  {isDealer && <span className="text-amber-400 text-xs ml-1.5">(Dealer)</span>}
+                  {isDealer && <span className="text-gold-200 text-xs ml-1.5">(Dealer)</span>}
                 </span>
                 {hasBid && (
-                  <span className="text-blue-400 text-sm">Bid: {selectedBid}</span>
+                  <span className="text-gold-200 text-sm">Bid: {selectedBid}</span>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -52,10 +52,10 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
                       disabled={isRestricted}
                       className={`min-w-[44px] h-11 rounded-lg font-semibold text-sm ${
                         isRestricted
-                          ? 'bg-gray-700 text-gray-600 line-through'
+                          ? 'bg-navy-700/60 text-navy-400 line-through'
                           : isSelected
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-700 text-white active:bg-blue-600'
+                            ? 'btn-gold'
+                            : 'bg-navy-600/60 text-white border border-navy-400/20 active:bg-gold-300/20'
                       }`}
                     >
                       {n}
@@ -72,10 +72,10 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
       {bidsEntered > 0 && (
         <div className={`text-center py-2 rounded-lg mt-4 mb-3 text-sm font-medium ${
           totalBids === cardsDealt
-            ? 'bg-amber-900/50 text-amber-300'
+            ? 'bg-gold-300/15 text-gold-200 border border-gold-300/20'
             : totalBids > cardsDealt
-              ? 'bg-red-900/50 text-red-300'
-              : 'bg-blue-900/50 text-blue-300'
+              ? 'bg-red-900/40 text-red-300 border border-red-700/30'
+              : 'bg-blue-900/40 text-blue-300 border border-blue-700/30'
         }`}>
           {totalBids === cardsDealt
             ? `Even — all bids could be met`
@@ -90,18 +90,14 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
       <div className="flex gap-3 mt-3">
         <button
           onClick={onBack}
-          className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600"
+          className="flex-1 py-3 rounded-xl bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
         >
           Back
         </button>
         <button
           onClick={onConfirm}
           disabled={!allBidsEntered}
-          className={`flex-1 py-3 rounded-xl font-semibold ${
-            allBidsEntered
-              ? 'bg-blue-600 text-white active:bg-blue-500'
-              : 'bg-gray-700 text-gray-500'
-          }`}
+          className={`btn-gold flex-1 py-3 rounded-xl`}
         >
           Confirm Bids
         </button>

@@ -114,22 +114,30 @@ export default function SetupScreen({ onStartGame }) {
       onTouchMove={dragIndex !== null ? handleDragMove : undefined}
       onTouchEnd={dragIndex !== null ? handleDragEnd : undefined}
     >
-      <h1 className="text-2xl font-bold text-white text-center mb-6">Wizard Score Keeper</h1>
+      {/* Logo header */}
+      <div className="text-center mb-5 pt-2">
+        <img
+          src={`${import.meta.env.BASE_URL}wizard-logo.svg`}
+          alt="Wizard"
+          className="h-12 mx-auto mb-1"
+        />
+        <p className="text-gold-100/60 text-xs tracking-widest uppercase">Score Keeper</p>
+      </div>
 
-      <section className="mb-6">
-        <h2 className="text-lg font-semibold text-white mb-1">Players</h2>
-        <p className="text-gray-500 text-xs mb-3">Hold and drag to reorder. Tap D to set dealer.</p>
-        <div className="space-y-2" ref={listRef}>
+      <section className="mb-4">
+        <h2 className="text-lg font-semibold text-gold-100 mb-0.5">Players</h2>
+        <p className="text-navy-200 text-xs mb-2">Hold and drag to reorder. Tap D to set dealer.</p>
+        <div className="space-y-1.5" ref={listRef}>
           {players.map((player, i) => (
             <div
               key={player.id}
-              className={`flex items-center gap-2 rounded-lg p-1 transition-all ${
-                dragIndex === i ? 'bg-gray-700/50 scale-[1.02] shadow-lg' : ''
+              className={`flex items-center gap-1.5 p-1 transition-all ${
+                dragIndex === i ? 'scale-[1.02] shadow-lg' : ''
               }`}
               onMouseDown={e => handleDragStart(e, i)}
               onTouchStart={e => handleDragStart(e, i)}
             >
-              <div className="text-gray-500 cursor-grab active:cursor-grabbing px-1.5 text-lg touch-none">
+              <div className="text-gold-200/50 cursor-grab active:cursor-grabbing px-1 text-lg touch-none">
                 ⠿
               </div>
               <input
@@ -137,24 +145,31 @@ export default function SetupScreen({ onStartGame }) {
                 value={player.name}
                 onChange={e => updateName(i, e.target.value)}
                 placeholder={`Player ${i + 1}`}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none select-text"
+                className="flex-1 bg-navy-800/60 border border-gold-700/60 rounded-lg px-3 py-2.5 text-white placeholder-navy-200/50 focus:border-gold-300 focus:outline-none select-text"
                 maxLength={20}
               />
               <button
                 onClick={() => setFirstDealerIndex(i)}
-                className={`px-3 py-2.5 rounded-lg text-sm font-medium shrink-0 ${
+                className={`px-2 py-1 rounded-lg text-sm font-medium shrink-0 flex flex-col items-center min-w-[52px] ${
                   firstDealerIndex === i
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-gray-800 text-gray-400 border border-gray-700'
+                    ? 'text-gold-200'
+                    : 'text-navy-200/60 border border-gold-700/30 bg-navy-800/40'
                 }`}
                 title="Set as first dealer"
               >
-                {firstDealerIndex === i ? 'Dealer' : 'D'}
+                {firstDealerIndex === i ? (
+                  <>
+                    <span className="text-lg leading-none">♛</span>
+                    <span className="text-xs">Dealer</span>
+                  </>
+                ) : (
+                  <span>D</span>
+                )}
               </button>
               {players.length > MIN_PLAYERS && (
                 <button
                   onClick={() => removePlayer(i)}
-                  className="text-red-400 text-lg px-1 active:text-red-300"
+                  className="text-red-400/80 text-lg px-1 active:text-red-300"
                   aria-label="Remove player"
                 >
                   ✕
@@ -166,28 +181,28 @@ export default function SetupScreen({ onStartGame }) {
         {players.length < MAX_PLAYERS && (
           <button
             onClick={addPlayer}
-            className="mt-3 w-full py-2.5 rounded-lg border border-dashed border-gray-600 text-gray-400 active:bg-gray-800"
+            className="mt-2 w-full py-2 rounded-xl text-sm font-medium text-gold-200 border border-dashed border-gold-700/60 active:bg-gold-300/10"
           >
             + Add Player
           </button>
         )}
         {maxRounds && (
-          <p className="text-gray-400 text-sm mt-2 text-center">
+          <p className="text-navy-100 text-sm mt-2 text-center">
             {namedPlayers.length} players — {maxRounds} rounds max
           </p>
         )}
       </section>
 
-      <section className="mb-6 space-y-4">
-        <h2 className="text-lg font-semibold text-white">Settings</h2>
+      <section className="mb-4 space-y-3">
+        <h2 className="text-lg font-semibold text-gold-100">Settings</h2>
 
-        <div className="bg-gray-800 rounded-lg px-4 py-3">
+        <div className="card-gold px-3 py-2.5">
           <label className="flex items-center justify-between">
             <span className="text-gray-200">Canadian Rules</span>
             <div
               onClick={() => setCanadianRules(!canadianRules)}
               className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
-                canadianRules ? 'bg-blue-600' : 'bg-gray-600'
+                canadianRules ? 'bg-gold-300' : 'bg-navy-500'
               }`}
             >
               <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -196,7 +211,7 @@ export default function SetupScreen({ onStartGame }) {
             </div>
           </label>
           {canadianRules && (
-            <p className="text-gray-500 text-xs mt-2">
+            <p className="text-navy-200 text-xs mt-2">
               Dealer can't bid to make it even (except round 1)
             </p>
           )}
@@ -206,7 +221,7 @@ export default function SetupScreen({ onStartGame }) {
       <button
         onClick={handleStart}
         disabled={!canStart}
-        className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-semibold text-lg disabled:bg-gray-700 disabled:text-gray-500 active:bg-blue-500"
+        className="btn-gold w-full py-3 rounded-xl text-lg"
       >
         Start Game
       </button>

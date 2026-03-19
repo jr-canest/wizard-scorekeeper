@@ -12,7 +12,7 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
     <div className="mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-white font-semibold">Tricks Won</h3>
-        <span className="text-gray-400 text-sm">
+        <span className="text-navy-200 text-sm">
           Remaining: {remaining}
         </span>
       </div>
@@ -30,14 +30,14 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
           const maxAvailable = cardsDealt - othersAssigned;
 
           return (
-            <div key={player.id} className="bg-gray-800 rounded-xl p-3">
+            <div key={player.id} className="card-gold p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white font-medium">
                   {player.name}
-                  <span className="text-gray-500 text-xs ml-1.5">(bid {bid})</span>
+                  <span className="text-navy-200 text-xs ml-1.5">(bid {bid})</span>
                 </span>
                 {hasTrick && (
-                  <span className="text-blue-400 text-sm">
+                  <span className="text-gold-200 text-sm">
                     Won: {selectedTrick}/{bid}
                   </span>
                 )}
@@ -53,10 +53,10 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
                       disabled={disabled}
                       className={`min-w-[44px] h-11 rounded-lg font-semibold text-sm ${
                         disabled
-                          ? 'bg-gray-700 text-gray-600'
+                          ? 'bg-navy-700/60 text-navy-400'
                           : isSelected
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-700 text-white active:bg-blue-600'
+                            ? 'btn-gold'
+                            : 'bg-navy-600/60 text-white border border-navy-400/20 active:bg-gold-300/20'
                       }`}
                     >
                       {n}
@@ -73,18 +73,14 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
       <div className="flex gap-3 mt-4">
         <button
           onClick={onBack}
-          className="flex-1 py-3 rounded-xl bg-gray-700 text-gray-300 font-medium active:bg-gray-600"
+          className="flex-1 py-3 rounded-xl bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
         >
           Back
         </button>
         <button
           onClick={onConfirm}
           disabled={!totalValid}
-          className={`flex-1 py-3 rounded-xl font-semibold ${
-            totalValid
-              ? 'bg-blue-600 text-white active:bg-blue-500'
-              : 'bg-gray-700 text-gray-500'
-          }`}
+          className={`btn-gold flex-1 py-3 rounded-xl`}
         >
           Score Round
         </button>

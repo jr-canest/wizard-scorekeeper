@@ -38,7 +38,11 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
   }, [players]);
 
   const selectSuggestion = useCallback((index, name) => {
-    updateName(index, name);
+    setPlayers(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], name };
+      return next;
+    });
     setSuggestions([]);
     setActiveInputIndex(null);
   }, []);

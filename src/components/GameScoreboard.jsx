@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
 import { saveGameResult } from '../utils/firebase';
@@ -156,7 +156,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     return scores.filter(([, s]) => s === maxScore).map(([id]) => id);
   }
 
-  const summary = isGameOver ? getGameSummary(sortedPlayers, totalScores, completedRounds, players) : '';
+  const summary = useMemo(() =>
+    isGameOver ? getGameSummary(sortedPlayers, totalScores, completedRounds, players) : '',
+    [isGameOver] // only compute once when game ends
+  );
 
   return (
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}

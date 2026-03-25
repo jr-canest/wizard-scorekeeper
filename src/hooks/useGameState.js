@@ -164,15 +164,17 @@ export function useGameState() {
     });
   }, []);
 
-  const declareLastRound = useCallback((trumpChoice) => {
+  const declareLastRound = useCallback(() => {
     setGameState(prev => {
-      const next = { ...prev, isLastRound: true, lastRoundTrumpChoice: trumpChoice };
-      if (trumpChoice === 'without') {
-        next.rounds = [...prev.rounds];
-        const round = { ...next.rounds[next.currentRound] };
-        round.trumpSuit = 'none';
-        next.rounds[next.currentRound] = round;
-      }
+      const next = { ...prev, isLastRound: true, lastRoundTrumpChoice: null };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const undeclareLastRound = useCallback(() => {
+    setGameState(prev => {
+      const next = { ...prev, isLastRound: false, lastRoundTrumpChoice: null };
       saveState(next);
       return next;
     });
@@ -201,6 +203,24 @@ export function useGameState() {
       const [moved] = players.splice(fromIndex, 1);
       players.splice(toIndex, 0, moved);
       next.players = players;
+      // Update dealerIndex in all rounds to follow the same player
+      next.rounds = prev.rounds.map(r => {
+        const dealerPlayer = prev.players[r.dealerIndex];
+        const newDealerIndex = players.findIndex(p => p.id === dealerPlayer.id);
+        return { ...r, dealerIndex: newDealerIndex >= 0 ? newDealerIndex : r.dealerIndex };
+      });
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  const setDealer = useCallback((playerIndex) => {
+    setGameState(prev => {
+      const next = { ...prev };
+      next.rounds = [...prev.rounds];
+      const round = { ...next.rounds[next.currentRound] };
+      round.dealerIndex = playerIndex;
+      next.rounds[next.currentRound] = round;
       saveState(next);
       return next;
     });
@@ -222,7 +242,7 @@ export function useGameState() {
       next.currentPhase = PHASES.TRICKS;
       next.rounds = [...prev.rounds];
       const round = { ...next.rounds[roundIndex] };
-      round.tricks = {};
+      // Keep existing tricks so user can adjust individual values
       round.scores = {};
       next.rounds[roundIndex] = round;
       saveState(next);
@@ -296,8 +316,10 @@ export function useGameState() {
     confirmTricks,
     nextRound,
     declareLastRound,
+    undeclareLastRound,
     addPlayerMidGame,
     reorderPlayers,
+    setDealer,
     addShamePoint,
     editRound,
     goBackToPreround,

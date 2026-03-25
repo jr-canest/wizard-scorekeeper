@@ -1,6 +1,8 @@
-export default function RoundScoreboard({ players, round, allRounds, totalScores, shamePoints, isLastRound, onNextRound, onEndGame, onEditRound }) {
-  // Keep player order, don't sort
-  const activePlayers = players.filter(p => p.id in round.scores);
+export default function RoundScoreboard({ players, round, allRounds, totalScores, shamePoints, isLastRound, dealerName, onNextRound, onEndGame, onEditRound }) {
+  // Sort by total score descending for results
+  const activePlayers = players
+    .filter(p => p.id in round.scores)
+    .sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
 
   // All completed rounds for the history table
   const completedRounds = allRounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
@@ -30,7 +32,12 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
 
   return (
     <div className="mb-4">
-      <h3 className="text-white font-semibold mb-3 text-center">Round {round.roundNumber} Results</h3>
+      {/* Clean header with just dealer info */}
+      <div className="flex items-center justify-center gap-2 mb-3">
+        <span className="text-gold-200 text-sm">♛ {dealerName}</span>
+        <span className="text-navy-200/40">•</span>
+        <span className="text-navy-200 text-sm">{round.cardsDealt} card{round.cardsDealt !== 1 ? 's' : ''}</span>
+      </div>
 
       {/* Current round detail */}
       <div className="card-gold overflow-hidden mb-4">

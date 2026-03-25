@@ -23,7 +23,9 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
     <div className="mb-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-white font-semibold">Bidding</h3>
-        <span className="text-navy-200 text-sm">
+        <span className={`text-sm font-medium ${
+          totalBids > cardsDealt ? 'text-red-400' : totalBids === cardsDealt ? 'text-yellow-400' : 'text-blue-400'
+        }`}>
           Total: {totalBids} / {cardsDealt}
         </span>
       </div>

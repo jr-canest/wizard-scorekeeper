@@ -17,13 +17,14 @@ export default function PreRoundScreen({
   onSelectTrump,
   onReorderPlayers,
   onDeclareLastRound,
+  onUndeclareLastRound,
   onAddPlayer,
   onEndGame,
+  onChangeDealer,
 }) {
   const dealer = players.find(p => p.id === dealerId) || players[0];
   const hasTrump = trumpSuit !== null;
   const suitInfo = trumpSuit && trumpSuit !== 'none' ? SUITS[trumpSuit] : null;
-  const forceNoTrump = isLastRound && lastRoundTrumpChoice === 'without';
 
   const [dragIndex, setDragIndex] = useState(null);
   const listRef = useRef(null);
@@ -78,6 +79,9 @@ export default function PreRoundScreen({
     }
   }
 
+  // Rounds left calculation (ascending rounds remaining after this one)
+  const roundsLeft = Math.max(0, maxRounds - roundNumber);
+
   return (
     <div
       className="mb-4 select-none"
@@ -92,18 +96,16 @@ export default function PreRoundScreen({
           Round {roundNumber}
         </h2>
         <p className="text-navy-200 text-sm mt-1">
-          {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each
+          {dealer.name} deals {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each
           {isExtraRound && <span className="text-gold-200 ml-1">(max cards)</span>}
         </p>
+        <p className="text-navy-200/50 text-xs mt-0.5">
+          {roundsLeft > 0
+            ? `${roundsLeft} round${roundsLeft !== 1 ? 's' : ''} left`
+            : 'Final ascending round'
+          }
+        </p>
       </div>
-
-      {isLastRound && (
-        <div className="border border-gold-300/30 bg-gold-300/10 rounded-lg px-3 py-2 mb-4 text-center">
-          <span className="text-gold-200 text-sm font-medium">
-            Last Round {forceNoTrump ? '(No Trump)' : ''}
-          </span>
-        </div>
-      )}
 
       {/* Player list in seating order — draggable */}
       <div className="card-gold overflow-hidden mb-4">
@@ -156,44 +158,54 @@ export default function PreRoundScreen({
           Start Round
         </button>
 
-        {/* Trump button — shows current selection, always tappable to edit */}
-        {!forceNoTrump && (
+        {/* Trump + Last Round toggle in same row */}
+        <div className="flex gap-2 items-center">
           <button
             onClick={onSelectTrump}
-            className="card-gold w-full py-3 font-medium active:bg-navy-600/60"
+            className="card-gold flex-1 py-2.5 font-medium active:bg-navy-600/60 text-sm"
           >
             {hasTrump && suitInfo ? (
               <span style={{ color: suitInfo.color }}>{trumpLabel}</span>
-            ) : hasTrump ? (
-              <span className="text-navy-200">{trumpLabel}</span>
             ) : (
               <span className="text-navy-200">{trumpLabel}</span>
             )}
           </button>
-        )}
-
-        {/* Secondary actions */}
-        <div className="flex gap-2">
-          {!isLastRound && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gold-700/40 bg-navy-800/40">
+            <span className="text-navy-200 text-sm whitespace-nowrap">Last Round</span>
             <button
-              onClick={onDeclareLastRound}
-              className="flex-1 py-2.5 rounded-lg text-sm text-gold-200 border border-gold-700/40 bg-navy-800/40 active:bg-navy-700/60"
+              onClick={() => isLastRound ? onUndeclareLastRound() : onDeclareLastRound()}
+              className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors shrink-0 ${
+                isLastRound ? 'bg-gold-300' : 'bg-navy-600'
+              }`}
             >
-              Declare Last Round
+              <span
+                className="inline-block w-4 h-4 rounded-full bg-white shadow transition-transform"
+                style={{ transform: isLastRound ? 'translateX(22px)' : 'translateX(3px)' }}
+              />
             </button>
-          )}
+          </div>
+        </div>
+
+        {/* Change Dealer + Add Player — muted bottom row */}
+        <div className="flex gap-2">
+          <button
+            onClick={onChangeDealer}
+            className="flex-1 py-2 rounded-lg text-xs text-navy-200/50 bg-navy-700/20 active:bg-navy-600/40"
+          >
+            Change Dealer
+          </button>
           <button
             onClick={onAddPlayer}
-            className="flex-1 py-2.5 rounded-lg text-sm text-navy-200 bg-navy-700/40 active:bg-navy-600/60"
+            className="flex-1 py-2 rounded-lg text-xs text-navy-200/50 bg-navy-700/20 active:bg-navy-600/40"
           >
             + Add Player
           </button>
         </div>
 
-        {/* End Game — subtle link */}
+        {/* End Game — very subtle */}
         <button
           onClick={onEndGame}
-          className="w-full py-1.5 text-navy-200/50 text-xs active:text-gray-300"
+          className="w-full py-1 text-navy-200/30 text-[10px] active:text-navy-200/60"
         >
           End Game
         </button>

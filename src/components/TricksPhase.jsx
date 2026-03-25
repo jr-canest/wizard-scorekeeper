@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getBiddingOrder } from '../utils/roundCalculations';
 import { playBooSound } from '../utils/sounds';
 import ConfirmDialog from './ConfirmDialog';
@@ -9,6 +9,14 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
 
   const tricksAssigned = Object.values(tricks).reduce((s, t) => s + t, 0);
   const remaining = cardsDealt - tricksAssigned;
+
+  // Auto-fill remaining players with 0 when all tricks are accounted for
+  useEffect(() => {
+    if (remaining === 0) {
+      const unset = biddingOrder.filter(p => !(p.id in tricks));
+      unset.forEach(p => onTrick(p.id, 0));
+    }
+  }, [remaining, biddingOrder, tricks, onTrick]);
   const allTricksEntered = biddingOrder.every(p => p.id in tricks);
   const totalValid = allTricksEntered && tricksAssigned === cardsDealt;
 
@@ -50,8 +58,10 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
                 </span>
                 <div className="flex items-center gap-2">
                   {hasTrick && (
-                    <span className="text-gold-200 text-sm">
-                      Won: {selectedTrick}/{bid}
+                    <span className={`text-sm font-medium ${
+                      selectedTrick === bid ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {selectedTrick}/{bid}
                     </span>
                   )}
                   <button

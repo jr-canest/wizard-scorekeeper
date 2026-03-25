@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { PHASES } from './utils/constants';
 import SetupScreen from './components/SetupScreen';
@@ -33,8 +33,10 @@ export default function App() {
     confirmTricks,
     nextRound,
     declareLastRound,
+    undeclareLastRound,
     addPlayerMidGame,
     reorderPlayers,
+    setDealer,
     addShamePoint,
     editRound,
     goBackToPreround,
@@ -46,11 +48,32 @@ export default function App() {
 
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
-  const [showLastRound, setShowLastRound] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [showTrumpPicker, setShowTrumpPicker] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showDealerPicker, setShowDealerPicker] = useState(false);
+
+  // Wake lock — keep screen awake while app is open
+  useEffect(() => {
+    let wakeLock = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch { /* ignore */ }
+    }
+    requestWakeLock();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeLock) wakeLock.release();
+    };
+  }, []);
 
   // Resume game prompt
   if (!gameState && hasSavedGame) {
@@ -152,9 +175,11 @@ export default function App() {
           onSelectTrump={() => setShowTrumpPicker(true)}
           allPlayers={gameState.players}
           onReorderPlayers={reorderPlayers}
-          onDeclareLastRound={() => setShowLastRound(true)}
+          onDeclareLastRound={declareLastRound}
+          onUndeclareLastRound={undeclareLastRound}
           onAddPlayer={() => setShowAddPlayer(true)}
           onEndGame={() => setShowEndGameConfirm(true)}
+          onChangeDealer={() => setShowDealerPicker(true)}
         />
       )}
 
@@ -207,6 +232,7 @@ export default function App() {
           totalScores={totalScores}
           shamePoints={gameState.shamePoints}
           isLastRound={gameState.isLastRound}
+          dealerName={dealer.name}
           onNextRound={nextRound}
           onEndGame={endGame}
           onEditRound={() => editRound(gameState.currentRound)}
@@ -247,35 +273,6 @@ export default function App() {
         />
       )}
 
-      {showLastRound && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold text-white mb-2">Declare Last Round</h3>
-            <p className="text-gray-300 text-sm mb-4">This round will be the final round. Play with or without trump?</p>
-            <div className="space-y-2">
-              <button
-                onClick={() => { declareLastRound('with'); setShowLastRound(false); }}
-                className="btn-gold w-full py-3 rounded-lg"
-              >
-                With Trump
-              </button>
-              <button
-                onClick={() => { declareLastRound('without'); setShowLastRound(false); }}
-                className="w-full py-3 rounded-lg bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
-              >
-                Without Trump
-              </button>
-              <button
-                onClick={() => setShowLastRound(false)}
-                className="w-full py-2 text-navy-200/60 text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showEndGameConfirm && (
         <ConfirmDialog
           title="End Game?"
@@ -294,6 +291,36 @@ export default function App() {
           onConfirm={() => { newGame(); setShowNewGameConfirm(false); }}
           onCancel={() => setShowNewGameConfirm(false)}
         />
+      )}
+
+      {showDealerPicker && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-5 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-white mb-3">Change Dealer</h3>
+            <div className="space-y-1 max-h-80 overflow-y-auto">
+              {activePlayers.map((p) => {
+                const playerIndex = gameState.players.indexOf(p);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => { setDealer(playerIndex); setShowDealerPicker(false); }}
+                    className={`w-full text-left py-2.5 px-3 rounded-lg ${
+                      p.id === dealer.id ? 'bg-gold-300/20 text-gold-200' : 'text-white active:bg-navy-600'
+                    }`}
+                  >
+                    {p.name} {p.id === dealer.id ? '♛' : ''}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setShowDealerPicker(false)}
+              className="w-full mt-3 py-2 text-navy-200/60 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

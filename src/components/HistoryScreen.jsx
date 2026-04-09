@@ -3,12 +3,34 @@ import { getAllPlayers, getRecentGames } from '../utils/firebase';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
+const SORT_COLUMNS = [
+  { key: 'winRate', label: 'Win%', width: 'w-14' },
+  { key: 'wins', label: 'W', width: 'w-10' },
+  { key: 'gamesPlayed', label: 'GP', width: 'w-10' },
+  { key: 'avg', label: 'Avg', width: 'w-14' },
+  { key: 'bestScore', label: 'Best', width: 'w-14' },
+];
+
+function getPlayerSortValue(player, key) {
+  const gp = player.gamesPlayed || 0;
+  switch (key) {
+    case 'winRate': return gp > 0 ? (player.wins || 0) / gp : 0;
+    case 'wins': return player.wins || 0;
+    case 'gamesPlayed': return gp;
+    case 'avg': return gp > 0 ? (player.totalScore || 0) / gp : 0;
+    case 'bestScore': return player.bestScore ?? -Infinity;
+    default: return 0;
+  }
+}
+
 export default function HistoryScreen({ onClose }) {
   const [tab, setTab] = useState('players'); // 'players' | 'games'
   const [players, setPlayers] = useState([]);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortKey, setSortKey] = useState('winRate');
+  const [sortAsc, setSortAsc] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -25,12 +47,20 @@ export default function HistoryScreen({ onClose }) {
       .finally(() => setLoading(false));
   }, []);
 
+  function handleSort(key) {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(false); // default descending
+    }
+  }
+
   const sortedPlayers = [...players].sort((a, b) => {
-    // Sort by win rate, then total score
-    const aWinRate = a.gamesPlayed > 0 ? a.wins / a.gamesPlayed : 0;
-    const bWinRate = b.gamesPlayed > 0 ? b.wins / b.gamesPlayed : 0;
-    if (bWinRate !== aWinRate) return bWinRate - aWinRate;
-    return (b.totalScore || 0) - (a.totalScore || 0);
+    const aVal = getPlayerSortValue(a, sortKey);
+    const bVal = getPlayerSortValue(b, sortKey);
+    const diff = bVal - aVal;
+    return sortAsc ? -diff : diff;
   });
 
   function formatDate(timestamp) {
@@ -104,16 +134,23 @@ export default function HistoryScreen({ onClose }) {
                   <div className="flex text-gold-200/70 text-xs font-medium">
                     <span className="w-8"></span>
                     <span className="flex-1">Player</span>
-                    <span className="w-12 text-center">W</span>
-                    <span className="w-12 text-center">GP</span>
-                    <span className="w-14 text-center">Avg</span>
-                    <span className="w-14 text-right">Best</span>
+                    {SORT_COLUMNS.map(col => (
+                      <button
+                        key={col.key}
+                        onClick={() => handleSort(col.key)}
+                        className={`${col.width} text-center active:text-gold-100 ${
+                          col.key === 'bestScore' ? 'text-right' : ''
+                        } ${sortKey === col.key ? 'text-gold-200' : ''}`}
+                      >
+                        {col.label}{sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 {sortedPlayers.map((player, i) => {
-                  const avg = player.gamesPlayed > 0
-                    ? Math.round(player.totalScore / player.gamesPlayed)
-                    : 0;
+                  const gp = player.gamesPlayed || 0;
+                  const avg = gp > 0 ? Math.round(player.totalScore / gp) : 0;
+                  const winRate = gp > 0 ? Math.round(((player.wins || 0) / gp) * 100) : 0;
                   const medal = i < 3 ? medalEmojis[i] : null;
                   return (
                     <div
@@ -133,8 +170,9 @@ export default function HistoryScreen({ onClose }) {
                           </span>
                         )}
                       </div>
-                      <span className="w-12 text-center text-green-400 text-sm font-semibold">{player.wins || 0}</span>
-                      <span className="w-12 text-center text-navy-200 text-sm">{player.gamesPlayed || 0}</span>
+                      <span className="w-14 text-center text-gold-100 text-sm font-semibold">{winRate}%</span>
+                      <span className="w-10 text-center text-green-400 text-sm font-semibold">{player.wins || 0}</span>
+                      <span className="w-10 text-center text-navy-200 text-sm">{gp}</span>
                       <span className={`w-14 text-center text-sm font-medium ${
                         avg > 0 ? 'text-green-400' : avg < 0 ? 'text-red-400' : 'text-navy-200'
                       }`}>

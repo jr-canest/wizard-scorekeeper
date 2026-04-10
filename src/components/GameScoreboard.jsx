@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
 import { saveGameResult } from '../utils/firebase';
+import BarChartRace from './BarChartRace';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
@@ -93,6 +94,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
   const [showWipe, setShowWipe] = useState(false);
   const [contentVisible, setContentVisible] = useState(!isGameOver);
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [showReplay, setShowReplay] = useState(isGameOver && completedRounds.length > 1);
   const hasSaved = useRef(false);
 
   useEffect(() => {
@@ -214,6 +216,25 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           <div className="bg-navy-700/60 border border-gold-700/30 rounded-xl px-4 py-3 mb-4 text-center">
             <p className="text-gold-100 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: summary }} />
           </div>
+        )}
+
+        {/* Bar Chart Race */}
+        {isGameOver && showReplay && completedRounds.length > 1 && (
+          <BarChartRace
+            players={players}
+            completedRounds={completedRounds}
+            onDone={() => setShowReplay(false)}
+          />
+        )}
+
+        {/* Replay button when dismissed */}
+        {isGameOver && !showReplay && completedRounds.length > 1 && (
+          <button
+            onClick={() => setShowReplay(true)}
+            className="w-full py-2 mb-4 rounded-lg text-xs text-navy-200/60 border border-navy-600/40 active:bg-navy-700/40"
+          >
+            ▶ Watch Replay
+          </button>
         )}
 
         {/* Standings */}

@@ -70,50 +70,15 @@ export const generateGameSummary = onCall(
       .filter(Boolean)
       .join('\n');
 
-    const prompt = `You're the smack-talking friend at a Wizard card game giving a recap after the final trick. Wizard is a trick-taking card game:
-- 60-card deck: standard 52 + 4 Wizards (auto-win any trick) + 4 Jesters (auto-lose any trick)
-- Round 1 deals 1 card, round 2 deals 2, etc — hand sizes grow
-- Before each round, every player BIDS how many tricks they'll win
-- Exact bid = 20 + 10 per trick won. Miss by anything = -10 per trick off the bid
-- Dealer bids LAST, which is a curse (you know everyone else's bid before yours)
-- Canadian rules (optional): dealer can't bid a number that makes the totals match — forces someone to overbid or underbid
-- Trump suit is flipped from the top of the deck each round (Wizard flipped = dealer picks, Jester flipped = no trump)
-- "Overbid" = total bids > tricks available. "Underbid" = total < tricks. Either way, somebody's missing.
+    const prompt = `You're writing a funny recap for a game of Wizard — a trick-taking card game where players bid how many tricks they'll take, score big for hitting it exact, lose points for missing. 60 cards: standard deck plus 4 Wizards (auto-win a trick) and 4 Jesters (auto-lose). The dealer bids last. Canadian rules (optional) force the dealer's bid to break the total.
 
 ${context}
 
-Write a 2-3 sentence recap. First sentence or two: the main story (who won, how, the roast). Last sentence: a twist — a callout on a specific player, a dry observation, a question, a burn. Under 55 words total.
+Write a 2-3 sentence recap based on what actually happened in THIS game. The story might be a dominance blowout, a close nail-biter, a comeback from behind, chaos with many lead changes, or a bloodbath where everyone went negative. Call out shame points when they happened. Use the real numbers from the stats above.
 
-Lean HEAVY on actual Wizard lingo: bids, overbids, underbids, tricks, trump, Wizards (the cards), Jesters, the dealer's curse, flipped trump, cards dealt, "nailed it," "busted the bid," "trumped," "sandbagged," "stuck with the Jester."
+Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, dealer's curse, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, curses, spellbound). Both should feel natural together.
 
-Style examples (match THIS game's stats, don't copy the words):
-
-Dominance:
-"<b>Alice</b> nailed every single bid like the trump flip was rigged in her favor. <b>Bob</b> and <b>Carl</b> are still arguing about whose overbid lost Round 7. Somebody check <b>Alice</b>'s sleeve for Wizards."
-
-Close:
-"One busted bid in Round 9 was all it took — <b>Alice</b> wins by 10 while <b>Bob</b> replays that Jester lead in his nightmares. <b>Carl</b>'s 5 lead changes prove nobody had any idea who was winning."
-
-Comeback:
-"<b>Alice</b> was dead and buried in 4th through Round 6, then apparently remembered how to count trumps. <b>Bob</b>'s 100-point lead is now a cautionary tale. <b>Carl</b> went from ruler to footnote in three rounds flat."
-
-Chaotic:
-"Seven lead changes. Nine missed bids. Nobody could read the trump. <b>Alice</b> backed into victory because everyone else was busy trumping each other out of existence. Was this even Wizard?"
-
-Bloodbath (negatives):
-"Three players finished in the red — apparently bidding is hard. <b>Alice</b> wins by not being the disaster. <b>Bob</b> took -80 and a shame point; maybe sit the next one out."
-
-Shame points:
-"<b>Bob</b> earned 3 shame points for confidently bidding 5 and taking 1 — twice. <b>Alice</b> wins the crown, but <b>Bob</b> wins the story of the night."
-
-Rules:
-- 2-3 sentences. Under 55 words total.
-- Bold EVERY name: <b>Name</b>
-- Never say "they" or "their" — names only.
-- Use the real stats (margin, lead changes, shame count, rank climbed from, round count, player count).
-- USE WIZARD LINGO liberally — bids, tricks, trumps, Wizards, Jesters, dealer, overbid, underbid, busted, nailed.
-- Be FUNNY. Dry, sharp, teasing. Not flowery, not fantasy-novel, not a sportscaster.
-- No preamble, no quotes, no markdown besides <b>. Output only the recap.`;
+Style: under 55 words, funny, a little roast-y, specific to the game. Bold every name with <b>Name</b>. Never use "they" or "their" — say names directly. No preamble or quotes — just the recap.`;
 
     let text;
     try {

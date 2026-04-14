@@ -70,24 +70,57 @@ export const generateGameSummary = onCall(
       .filter(Boolean)
       .join('\n');
 
-    const prompt = `You write one-sentence recaps for a wizard-themed card game.
+    const prompt = `You're the smack-talking friend at a Wizard card game giving a recap after the final trick. Wizard is a trick-taking card game:
+- 60-card deck: standard 52 + 4 Wizards (auto-win any trick) + 4 Jesters (auto-lose any trick)
+- Round 1 deals 1 card, round 2 deals 2, etc — hand sizes grow
+- Before each round, every player BIDS how many tricks they'll win
+- Exact bid = 20 + 10 per trick won. Miss by anything = -10 per trick off the bid
+- Dealer bids LAST, which is a curse (you know everyone else's bid before yours)
+- Canadian rules (optional): dealer can't bid a number that makes the totals match — forces someone to overbid or underbid
+- Trump suit is flipped from the top of the deck each round (Wizard flipped = dealer picks, Jester flipped = no trump)
+- "Overbid" = total bids > tricks available. "Underbid" = total < tricks. Either way, somebody's missing.
 
 ${context}
 
+Write a 2-3 sentence recap. First sentence or two: the main story (who won, how, the roast). Last sentence: a twist — a callout on a specific player, a dry observation, a question, a burn. Under 55 words total.
+
+Lean HEAVY on actual Wizard lingo: bids, overbids, underbids, tricks, trump, Wizards (the cards), Jesters, the dealer's curse, flipped trump, cards dealt, "nailed it," "busted the bid," "trumped," "sandbagged," "stuck with the Jester."
+
+Style examples (match THIS game's stats, don't copy the words):
+
+Dominance:
+"<b>Alice</b> nailed every single bid like the trump flip was rigged in her favor. <b>Bob</b> and <b>Carl</b> are still arguing about whose overbid lost Round 7. Somebody check <b>Alice</b>'s sleeve for Wizards."
+
+Close:
+"One busted bid in Round 9 was all it took — <b>Alice</b> wins by 10 while <b>Bob</b> replays that Jester lead in his nightmares. <b>Carl</b>'s 5 lead changes prove nobody had any idea who was winning."
+
+Comeback:
+"<b>Alice</b> was dead and buried in 4th through Round 6, then apparently remembered how to count trumps. <b>Bob</b>'s 100-point lead is now a cautionary tale. <b>Carl</b> went from ruler to footnote in three rounds flat."
+
+Chaotic:
+"Seven lead changes. Nine missed bids. Nobody could read the trump. <b>Alice</b> backed into victory because everyone else was busy trumping each other out of existence. Was this even Wizard?"
+
+Bloodbath (negatives):
+"Three players finished in the red — apparently bidding is hard. <b>Alice</b> wins by not being the disaster. <b>Bob</b> took -80 and a shame point; maybe sit the next one out."
+
+Shame points:
+"<b>Bob</b> earned 3 shame points for confidently bidding 5 and taking 1 — twice. <b>Alice</b> wins the crown, but <b>Bob</b> wins the story of the night."
+
 Rules:
-- Produce ONE sentence (2 short sentences max), maximum ~30 words total.
-- Use wizard/magic puns (spells, cauldron, wand, prophecy, crown, hex, potion, etc.).
-- Bold every player name with <b>NAME</b> tags.
-- Match the vibe: playful, a bit roast-y for big losers, celebratory for clutch wins.
-- DO NOT use "they" or "their" — address players by name.
-- Vary the tone based on the game: dominance = awed, close = tense, comeback = dramatic, chaotic = wild, bloodbath = sympathetic jabs.
-- Return ONLY the sentence. No preamble, no quotes, no markdown besides the <b> tags.`;
+- 2-3 sentences. Under 55 words total.
+- Bold EVERY name: <b>Name</b>
+- Never say "they" or "their" — names only.
+- Use the real stats (margin, lead changes, shame count, rank climbed from, round count, player count).
+- USE WIZARD LINGO liberally — bids, tricks, trumps, Wizards, Jesters, dealer, overbid, underbid, busted, nailed.
+- Be FUNNY. Dry, sharp, teasing. Not flowery, not fantasy-novel, not a sportscaster.
+- No preamble, no quotes, no markdown besides <b>. Output only the recap.`;
 
     let text;
     try {
       const message = await client.messages.create({
         model: 'claude-haiku-4-5',
         max_tokens: 200,
+        temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });
       text = message.content

@@ -127,6 +127,61 @@ const REST_PHRASES = [
   "{rest} — the cards weren't feeling generous.",
 ];
 
+/**
+ * Build the payload sent to the Cloud Function that generates the AI summary.
+ * Contains just enough context for the model to vary tone.
+ */
+export function buildAISummaryPayload(sortedPlayers, totalScores, completedRounds, allPlayers, settings = {}) {
+  const runningTotals = getRunningTotals(completedRounds, allPlayers);
+
+  // Lead changes
+  let leadChanges = 0;
+  let prevLeader = null;
+  for (const rt of runningTotals) {
+    const leader = getLeaderAtRound(rt.totals, allPlayers);
+    if (prevLeader !== null && leader !== prevLeader) leadChanges++;
+    prevLeader = leader;
+  }
+
+  // Biggest lead during game
+  let biggestLead = 0;
+  for (const rt of runningTotals) {
+    const scores = allPlayers.map(p => rt.totals[p.id] || 0).sort((a, b) => b - a);
+    const gap = (scores[0] ?? 0) - (scores[1] ?? 0);
+    if (gap > biggestLead) biggestLead = gap;
+  }
+
+  // Winner's worst rank during the game
+  let comebackRank = null;
+  if (sortedPlayers.length > 0) {
+    const winnerId = sortedPlayers[0].id;
+    let worst = 0;
+    for (const rt of runningTotals) {
+      const rank = getRankAtRound(rt.totals, allPlayers, winnerId);
+      if (rank > worst) worst = rank;
+    }
+    // Only report if winner was behind at some point (rank > 0 meaning not always 1st)
+    if (worst > 0) comebackRank = worst + 1; // convert to 1-indexed
+  }
+
+  const negativeCount = sortedPlayers.filter(p => (totalScores[p.id] || 0) < 0).length;
+
+  return {
+    players: sortedPlayers.map((p, i) => ({
+      name: p.name,
+      score: totalScores[p.id] || 0,
+      rank: i + 1,
+      shamePoints: 0, // caller can fill this in
+    })),
+    roundCount: completedRounds.length,
+    canadianRules: !!settings.canadianRules,
+    leadChanges,
+    biggestLead,
+    comebackRank,
+    negativeCount,
+  };
+}
+
 export function getGameSummary(sortedPlayers, totalScores, completedRounds, allPlayers) {
   if (sortedPlayers.length < 2) return '';
 

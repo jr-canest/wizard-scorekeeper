@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { getGameSummary } from '../utils/gameSummary';
+import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
-import { saveGameResult } from '../utils/firebase';
+import { saveGameResult, fetchAISummary, isProduction } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
@@ -85,7 +85,7 @@ function Sparkles() {
   );
 }
 
-export default function GameScoreboard({ players, rounds, totalScores, shamePoints, onClose, isGameOver, onKeepPlaying, onNewGame, onShowHistory }) {
+export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, onKeepPlaying, onNewGame, onShowHistory }) {
   const sortedPlayers = [...players].sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
   const completedRounds = rounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
   const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -158,10 +158,37 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     return scores.filter(([, s]) => s === maxScore).map(([id]) => id);
   }
 
-  const summary = useMemo(() =>
+  // Fallback summary (computed immediately, shown while AI is loading or if AI fails)
+  const fallbackSummary = useMemo(() =>
     isGameOver ? getGameSummary(sortedPlayers, totalScores, completedRounds, players) : '',
     [isGameOver] // only compute once when game ends
   );
+
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiFetchedRef = useRef(false);
+
+  // Fetch AI summary once when game ends (production only)
+  useEffect(() => {
+    if (!isGameOver || aiFetchedRef.current) return;
+    if (sortedPlayers.length < 2) return;
+    if (!isProduction()) return; // use fallback on localhost
+    aiFetchedRef.current = true;
+
+    const payload = buildAISummaryPayload(sortedPlayers, totalScores, completedRounds, players, settings || {});
+    // Add shame points into payload
+    payload.players = payload.players.map((pl) => {
+      const player = players.find(p => p.name === pl.name);
+      return { ...pl, shamePoints: (player && shamePoints?.[player.id]) || 0 };
+    });
+
+    setAiLoading(true);
+    fetchAISummary(payload)
+      .then((s) => { if (s) setAiSummary(s); })
+      .finally(() => setAiLoading(false));
+  }, [isGameOver]);
+
+  const summary = aiSummary || fallbackSummary;
 
   return (
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}

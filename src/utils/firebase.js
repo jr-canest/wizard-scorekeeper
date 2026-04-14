@@ -15,6 +15,7 @@ import {
   increment,
   serverTimestamp,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBT1yNBK3DyIk9GhiPc-heuBBBbjThlm88",
@@ -27,6 +28,26 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const functions = getFunctions(app, 'us-central1');
+
+// ─── Cloud Functions ───────────────────────────────────
+
+const generateGameSummaryFn = httpsCallable(functions, 'generateGameSummary');
+
+/**
+ * Call the Cloud Function to generate an AI game summary.
+ * Returns the summary string (with <b>name</b> tags), or null on error.
+ */
+export async function fetchAISummary(payload) {
+  try {
+    const result = await generateGameSummaryFn(payload);
+    const summary = result?.data?.summary;
+    return typeof summary === 'string' && summary.length > 0 ? summary : null;
+  } catch (err) {
+    console.warn('[Firebase] AI summary failed:', err);
+    return null;
+  }
+}
 
 /** Returns true if running on the live GitHub Pages site */
 export function isProduction() {

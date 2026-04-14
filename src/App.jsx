@@ -121,6 +121,7 @@ export default function App() {
           rounds={gameState.rounds}
           totalScores={totalScores}
           shamePoints={gameState.shamePoints}
+          settings={gameState.settings}
           isGameOver
           onKeepPlaying={keepPlaying}
           onNewGame={newGame}

@@ -123,12 +123,16 @@ export async function getAllPlayers() {
 /**
  * Save a completed game and update player stats.
  * playerResults: [{ name, score, rank, shamePoints }]
+ * Returns { gameId, resolvedPlayers } — gameId is null on localhost.
  */
 export async function saveGameResult(playerResults, roundCount) {
   // Only save on the live site, not during local development
   if (!isProduction()) {
     console.log('[Firebase] Skipping save — local development');
-    return playerResults.map(pr => ({ ...pr, firebaseId: null }));
+    return {
+      gameId: null,
+      resolvedPlayers: playerResults.map(pr => ({ ...pr, firebaseId: null })),
+    };
   }
 
   // 1. Resolve all players (find or create)
@@ -155,7 +159,7 @@ export async function saveGameResult(playerResults, roundCount) {
       shamePoints: p.shamePoints || 0,
     })),
   };
-  await addDoc(collection(db, 'games'), gameDoc);
+  const gameRef = await addDoc(collection(db, 'games'), gameDoc);
 
   // 3. Update each player's stats
   await Promise.all(
@@ -187,7 +191,20 @@ export async function saveGameResult(playerResults, roundCount) {
     })
   );
 
-  return resolvedPlayers;
+  return { gameId: gameRef.id, resolvedPlayers };
+}
+
+/**
+ * Update the AI-generated summary on a game document.
+ * Silently no-ops on localhost or with a null gameId.
+ */
+export async function updateGameSummary(gameId, summary) {
+  if (!isProduction() || !gameId || !summary) return;
+  try {
+    await updateDoc(doc(db, 'games', gameId), { summary });
+  } catch (err) {
+    console.warn('[Firebase] Failed to save summary:', err);
+  }
 }
 
 /**

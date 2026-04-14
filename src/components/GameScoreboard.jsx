@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
-import { saveGameResult, fetchAISummary, isProduction } from '../utils/firebase';
+import { saveGameResult, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
@@ -96,6 +96,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
   const [showReplay, setShowReplay] = useState(isGameOver && completedRounds.length > 1);
   const hasSaved = useRef(false);
+  const gameIdRef = useRef(null);
 
   useEffect(() => {
     if (isGameOver) {
@@ -121,7 +122,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           };
         });
         saveGameResult(playerResults, completedRounds.length)
-          .then(() => setSaveStatus('saved'))
+          .then((res) => {
+            gameIdRef.current = res?.gameId ?? null;
+            setSaveStatus('saved');
+          })
           .catch((err) => {
             console.error('Failed to save game:', err);
             setSaveStatus('error');
@@ -184,7 +188,22 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
     setAiLoading(true);
     fetchAISummary(payload)
-      .then((s) => { if (s) setAiSummary(s); })
+      .then((s) => {
+        if (s) {
+          setAiSummary(s);
+          // Persist the summary onto the game doc so re-opens don't re-call the API.
+          // gameIdRef may not be set yet if saveGameResult is slower than the AI call;
+          // in that case we retry after a short delay.
+          const persist = (retries = 5) => {
+            if (gameIdRef.current) {
+              updateGameSummary(gameIdRef.current, s);
+            } else if (retries > 0) {
+              setTimeout(() => persist(retries - 1), 400);
+            }
+          };
+          persist();
+        }
+      })
       .finally(() => setAiLoading(false));
   }, [isGameOver]);
 
@@ -240,8 +259,28 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
         {/* Game summary */}
         {isGameOver && summary && (
-          <div className="bg-navy-700/60 border border-gold-700/30 rounded-xl px-4 py-3 mb-4 text-center">
-            <p className="text-gold-100 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: summary }} />
+          <div className={`bg-navy-700/60 border border-gold-700/30 rounded-xl px-4 py-3 mb-4 text-center relative ${aiLoading ? 'summary-shimmer' : ''}`}>
+            <style>{`
+              @keyframes summary-fade-in {
+                from { opacity: 0; transform: translateY(4px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              @keyframes summary-shimmer-pulse {
+                0%, 100% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.0); }
+                50% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.45); }
+              }
+              .summary-shimmer {
+                animation: summary-shimmer-pulse 1.4s ease-in-out infinite;
+              }
+              .summary-text {
+                animation: summary-fade-in 0.5s ease-out;
+              }
+            `}</style>
+            <p
+              key={summary}
+              className="summary-text text-gold-100 text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: summary }}
+            />
           </div>
         )}
 

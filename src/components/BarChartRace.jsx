@@ -16,7 +16,6 @@ const LINE_COLORS = [
 export default function BarChartRace({ players, completedRounds, onDone }) {
   const [progress, setProgress] = useState(0); // 0 to totalRounds, fractional during animation
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   const animRef = useRef(null);
   const startTimeRef = useRef(null);
   const startProgressRef = useRef(0);
@@ -141,11 +140,15 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     };
   }, [isPlaying, animate]);
 
-  function handleStart() {
-    setHasStarted(true);
-    setProgress(0);
-    setIsPlaying(true);
-  }
+  // Auto-start the replay shortly after mount so it plays once the game-over
+  // wipe/sparkles have landed.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setProgress(0);
+      setIsPlaying(true);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const maxPlayers = useMemo(() =>
     Math.max(...rankData.map(r => r.activePlayers.length)),
@@ -226,35 +229,6 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     if (range === 0) return 1;
     return Math.min(1, Math.max(0, (progress - firstRound) / range));
   };
-
-  if (!hasStarted) {
-    return (
-      <div className="card-gold p-3 mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-gold-200 text-sm font-medium">Game Replay</h3>
-            <p className="text-navy-200/60 text-xs">{totalRounds} rounds</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleStart}
-              className="px-4 py-2 rounded-lg btn-gold text-sm font-medium"
-            >
-              ▶ Play Replay
-            </button>
-            {onDone && (
-              <button
-                onClick={onDone}
-                className="text-navy-200/40 text-xs active:text-white px-1"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="card-gold p-3 mb-4">

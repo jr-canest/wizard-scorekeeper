@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getBiddingOrder } from '../utils/roundCalculations';
 import { playBooSound } from '../utils/sounds';
+import { getBooPhrase } from '../utils/booPhrases';
 import ConfirmDialog from './ConfirmDialog';
+import BooToast from './BooToast';
 
-export default function TricksPhase({ players, dealerId, cardsDealt, bids, tricks, onTrick, onShame, onConfirm, onBack }) {
+export default function TricksPhase({ players, dealerId, cardsDealt, bids, tricks, shamePoints, onTrick, onShame, onConfirm, onBack }) {
   const biddingOrder = getBiddingOrder(dealerId, players);
   const [shameTarget, setShameTarget] = useState(null);
+  const [booMessage, setBooMessage] = useState(null);
 
   const tricksAssigned = Object.values(tricks).reduce((s, t) => s + t, 0);
   const remaining = cardsDealt - tricksAssigned;
@@ -24,6 +27,7 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
     if (shameTarget) {
       playBooSound();
       onShame(shameTarget.id);
+      setBooMessage(getBooPhrase(shameTarget.name));
       setShameTarget(null);
     }
   }, [shameTarget, onShame]);
@@ -55,6 +59,11 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
                 <span className="text-white font-medium">
                   {player.name}
                   <span className="text-navy-200 text-xs ml-1.5">(bid {bid})</span>
+                  {(shamePoints?.[player.id] || 0) > 0 && (
+                    <span className="text-red-400 text-xs ml-1.5">
+                      💀{shamePoints[player.id] > 1 ? `×${shamePoints[player.id]}` : ''}
+                    </span>
+                  )}
                 </span>
                 <div className="flex items-center gap-2">
                   {hasTrick && (
@@ -132,6 +141,8 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
           onCancel={() => setShameTarget(null)}
         />
       )}
+
+      <BooToast message={booMessage} onDone={() => setBooMessage(null)} />
     </div>
   );
 }

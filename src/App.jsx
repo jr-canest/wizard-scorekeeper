@@ -54,24 +54,51 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showDealerPicker, setShowDealerPicker] = useState(false);
 
-  // Wake lock — keep screen awake while app is open
+  // Wake lock — keep screen awake while app is open.
+  // iOS PWAs aggressively release the lock, so we re-acquire on:
+  //   - tab/app becoming visible
+  //   - window regaining focus
+  //   - the lock firing its own 'release' event (when visible)
   useEffect(() => {
+    if (!('wakeLock' in navigator)) return;
+
     let wakeLock = null;
-    async function requestWakeLock() {
+    let cancelled = false;
+
+    async function acquire() {
+      if (cancelled || wakeLock) return;
+      if (document.visibilityState !== 'visible') return;
       try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await navigator.wakeLock.request('screen');
-        }
-      } catch { /* ignore */ }
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+          // If the app is still visible when the system releases the lock
+          // (iOS does this after a while), grab it again.
+          if (document.visibilityState === 'visible' && !cancelled) {
+            acquire();
+          }
+        });
+      } catch {
+        /* ignore — page not visible, or unsupported */
+      }
     }
-    requestWakeLock();
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') requestWakeLock();
+
+    acquire();
+
+    const reacquire = () => {
+      if (document.visibilityState === 'visible') acquire();
     };
-    document.addEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('visibilitychange', reacquire);
+    window.addEventListener('focus', reacquire);
+
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      if (wakeLock) wakeLock.release();
+      cancelled = true;
+      document.removeEventListener('visibilitychange', reacquire);
+      window.removeEventListener('focus', reacquire);
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
     };
   }, []);
 

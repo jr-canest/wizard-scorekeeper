@@ -78,7 +78,15 @@ Write a 2-3 sentence recap based on what actually happened in THIS game. The sto
 
 Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, dealer's curse, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, curses, spellbound). Both should feel natural together.
 
-Style: under 55 words, funny, a little roast-y, specific to the game. Bold every name with <b>Name</b>. Never use "they" or "their" — say names directly. No preamble or quotes — just the recap.`;
+IMPORTANT: mention EVERY player by name at least once — no player should be left out of the recap. Even the middle-of-the-pack ones get a callout, a tease, or a one-word shoutout.
+
+FORMATTING RULES (strict):
+- Wrap each player name's first appearance in HTML <b>Name</b> tags. Example: <b>Alice</b>. NEVER use markdown bold like **Alice** — it will render as literal asterisks.
+- Output ONLY the recap text. No headers, no titles, no markdown (# or ## or ---), no bullet points, no quotes around the whole thing, no preamble like "Here's the recap:".
+- One flowing paragraph of 2-3 sentences, under 65 words total.
+- Never use "they" or "their" — say names directly.
+
+Style: funny, a little roast-y, specific to the game.`;
 
     let text;
     try {

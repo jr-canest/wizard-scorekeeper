@@ -1,11 +1,14 @@
 import { useState, useCallback } from 'react';
 import { getBiddingOrder, getRestrictedBid } from '../utils/roundCalculations';
 import ConfirmDialog from './ConfirmDialog';
+import BooToast from './BooToast';
 import { playBooSound } from '../utils/sounds';
+import { getBooPhrase } from '../utils/booPhrases';
 
 export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, shamePoints, onBid, onShame, onConfirm, onBack }) {
   const biddingOrder = getBiddingOrder(dealerId, players);
   const [shameTarget, setShameTarget] = useState(null);
+  const [booMessage, setBooMessage] = useState(null);
 
   const allBidsEntered = biddingOrder.every(p => p.id in bids);
   const totalBids = Object.values(bids).reduce((s, b) => s + b, 0);
@@ -15,6 +18,7 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
     if (shameTarget) {
       playBooSound();
       onShame(shameTarget.id);
+      setBooMessage(getBooPhrase(shameTarget.name));
       setShameTarget(null);
     }
   }, [shameTarget, onShame]);
@@ -50,6 +54,11 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
                 <span className="text-white font-medium">
                   {player.name}
                   {isDealer && <span className="text-gold-200 text-xs ml-1.5">(Dealer)</span>}
+                  {(shamePoints?.[player.id] || 0) > 0 && (
+                    <span className="text-red-400 text-xs ml-1.5">
+                      💀{shamePoints[player.id] > 1 ? `×${shamePoints[player.id]}` : ''}
+                    </span>
+                  )}
                 </span>
                 <div className="flex items-center gap-2">
                   {hasBid && (
@@ -135,6 +144,8 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
           onCancel={() => setShameTarget(null)}
         />
       )}
+
+      <BooToast message={booMessage} onDone={() => setBooMessage(null)} />
     </div>
   );
 }

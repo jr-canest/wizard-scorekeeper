@@ -402,32 +402,36 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 stroke="#0e1a38" strokeWidth="1.5"
               />
               {/*
-                Label block wrapped in a <g> with a CSS transform so rank swaps
-                slide the name + score instead of cutting. The dot stays on the
-                real score line (no transition) so the data stays accurate.
+                Label block wrapped in two nested <g>s:
+                  outer = X position (no transition — tracks the dot instantly)
+                  inner = Y position (transitions so rank swaps slide smoothly)
+                The dot stays on the real score line (no transition) so the
+                data line stays accurate.
               */}
-              <g
-                style={{
-                  transform: `translate(${x + 10}px, ${labelY}px)`,
-                  transition: 'transform 260ms cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                <text
-                  x="0" y="0"
-                  fill={playerColors[p.id]}
-                  fontSize="10" fontWeight="600"
-                  dominantBaseline="auto"
+              <g style={{ transform: `translateX(${x + 10}px)` }}>
+                <g
+                  style={{
+                    transform: `translateY(${labelY}px)`,
+                    transition: 'transform 260ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
                 >
-                  {p.name}
-                </text>
-                <text
-                  x="0" y="10"
-                  fill="#b0b8c8"
-                  fontSize="9" fontWeight="500"
-                  dominantBaseline="auto"
-                >
-                  {displayScore}
-                </text>
+                  <text
+                    x="0" y="0"
+                    fill={playerColors[p.id]}
+                    fontSize="10" fontWeight="600"
+                    dominantBaseline="auto"
+                  >
+                    {p.name}
+                  </text>
+                  <text
+                    x="0" y="10"
+                    fill="#b0b8c8"
+                    fontSize="9" fontWeight="500"
+                    dominantBaseline="auto"
+                  >
+                    {displayScore}
+                  </text>
+                </g>
               </g>
             </g>
           );

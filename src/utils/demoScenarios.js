@@ -166,7 +166,7 @@ export const SCENARIOS = {
       settings: { canadianRules: false },
     };
   },
-  bloodbath: () => {
+  meltdown: () => {
     const players = buildPlayers(4);
     const rounds = buildRounds(players, 10, [40, -30, -80, -120]);
     return {

@@ -82,11 +82,13 @@ export const generateGameSummary = onCall(
 
 ${context}
 
-Write a 2-3 sentence recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, chaos with many lead changes, or a bloodbath where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data.
+Write a 2-3 sentence recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, a chaotic mess with many lead changes, or a meltdown where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data.
 
 CRITICAL: Only mention a player's shame points if the stats above explicitly list them as having shame this game. If the stats say "0 shame points this game" for a player, that player was NOT shamed — do not imply otherwise.
 
-Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, dealer's curse, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, curses, spellbound). Both should feel natural together.
+Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, enchantments, spellbound, wands, potions, wizard's hat, wizard towers, fireworks). Both should feel natural together.
+
+TONE / CONTENT (important): keep it friendly-fantasy — Gandalf / Harry Potter / Wizard of Oz vibes. AVOID anything demonic, satanic, occult, dark arts, evil, cursed, hexed, death, blood, sacrifice, shadow realm, underworld, grim, tormented, damned, etc. No "dealer's curse", no "cursed", no skulls in the text, no "dark magic". Keep it playful and wholesome — this is a game night with friends, not a horror movie. "Bad luck", "off night", "misfire", "fumble", "spell gone wrong" are fine. If you reach for a word and it feels dark, pick something cheerful instead.
 
 IMPORTANT: mention EVERY player by name at least once — no player should be left out of the recap. Even the middle-of-the-pack ones get a callout, a tease, or a one-word shoutout.
 

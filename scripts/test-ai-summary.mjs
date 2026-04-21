@@ -58,7 +58,7 @@ const SCENARIOS = [
     },
   },
   {
-    label: 'Bloodbath (everyone negative but winner)',
+    label: 'Meltdown (everyone negative but winner)',
     data: {
       players: [
         { name: 'Jorge',  score: 40,   rank: 1, shamePoints: 1 },

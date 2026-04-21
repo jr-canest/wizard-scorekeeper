@@ -12,39 +12,39 @@ function joinNames(names) {
 
 const SENTENCES = {
   dominance: [
-    "{1st} didn't just win — the Grand Wizard cast a hex on the entire table. {2nd} and {3rd} never stood a chance. {rest}",
+    "{1st} waved the wand like the deck was under a spell. {2nd} and {3rd} never stood a chance. {rest}",
     "The Grand Wizard has spoken. {1st} saw the future every single round. {2nd} and {3rd} were playing a different game entirely. {rest}",
     "{1st} played like the deck was enchanted from the start. {2nd} and {3rd}, better luck next prophecy. {rest}",
     "Was that magic or just skill? {1st} left the table spellbound. {2nd} and {3rd} are still figuring out what happened. {rest}",
   ],
   close: [
     "{1st} edges out {2nd} by a whisker on the wizard's beard. {3rd} watches from the crystal ball. That was anyone's game until the last card. {rest}",
-    "{1st} and {2nd} dueled wands to the final round. {1st} blinked last. {3rd} kept the cauldron stirring. {rest}",
-    "A single trick separated {1st} from {2nd}. {3rd} was right there brewing trouble too. The council demands a rematch. {rest}",
+    "{1st} and {2nd} duelled wands to the final round. {1st} blinked last. {3rd} stirred the potion bravely. {rest}",
+    "A single trick separated {1st} from {2nd}. {3rd} was right there brewing too. The council demands a rematch. {rest}",
     "The crystal ball couldn't have predicted this finish. {1st} barely outcast {2nd}. {3rd} was a spell away from glory. {rest}",
   ],
   comeback: [
-    "{1st} rose from the ashes like a phoenix spell. Down and out, then untouchable. {2nd} and {3rd} watched the sorcery unfold. {rest}",
-    "Never count a wizard out. {1st} was lost in the enchanted forest and still found the crown. {2nd} and {3rd} learned that the hard way. {rest}",
-    "From the dungeon to the throne room — {1st} pulled off the greatest spell reversal in wizard history. {2nd} and {3rd} are still in shock. {rest}",
+    "{1st} rose like a phoenix spell. Down and out, then untouchable. {2nd} and {3rd} watched the magic unfold. {rest}",
+    "Never count a wizard out. {1st} wandered the enchanted forest and still found the crown. {2nd} and {3rd} learned that the hard way. {rest}",
+    "From bottom of the tower to the top — {1st} pulled off the greatest spell reversal in wizard history. {2nd} and {3rd} are still wide-eyed. {rest}",
     "Somebody check {1st}'s sleeves — that comeback was suspiciously magical. {2nd} and {3rd} demand a wand inspection. {rest}",
   ],
   steady: [
     "{1st} played it cool as a frozen wand, bid it clean, and walked away with the win. {2nd} and {3rd} kept the potions steady. {rest}",
     "No chaos, no wild spells — just quiet mastery from {1st}. {2nd} and {3rd} ran an honest enchantment. {rest}",
     "{1st} read the cards like a seasoned oracle. No drama, just precision. {2nd} and {3rd} kept composure at the table. {rest}",
-    "Boring? No. Clinical. {1st} bid with surgical precision all game long. {2nd} and {3rd} ran a clean cauldron too. {rest}",
+    "Boring? No. Clinical. {1st} bid with wizard-level precision all game long. {2nd} and {3rd} brewed a clean cauldron too. {rest}",
   ],
   chaotic: [
-    "What in Merlin's name just happened? {1st} somehow emerged from the magical wreckage. {2nd} and {3rd} survived, barely. {rest}",
-    "The lead changed hands more times than a wand in a duel. {1st} held on by a spell. {2nd} and {3rd} have war stories to tell. {rest}",
-    "Absolute potion explosion of a game. {1st} crawled out of the cauldron victorious. {2nd} and {3rd} are still picking up the pieces. {rest}",
+    "What in Merlin's name just happened? {1st} somehow emerged from the magical mishap. {2nd} and {3rd} made it out in one piece. {rest}",
+    "The lead changed hands more times than a wand in a duel. {1st} held on by a spell. {2nd} and {3rd} have stories to tell. {rest}",
+    "Absolute fireworks of a game. {1st} bubbled up with the crown. {2nd} and {3rd} are still sorting the sparks. {rest}",
   ],
-  bloodbath: [
-    "It was a curse-fest. {1st} won, but nobody's casting celebration spells. {2nd} and {3rd} are nursing magical wounds. {rest}",
-    "The dark arts claimed many victims tonight. {1st} survived the hex storm. {2nd} and {3rd} weren't so lucky. {rest}",
-    "Negative points everywhere — this wasn't a card game, it was a magical disaster zone. {1st} escaped with the least burns. {2nd} and {3rd} need a healing potion. {rest}",
-    "Someone forgot to put the lid on the cauldron. {1st} ducked in time. {2nd} and {3rd} took a face full of cursed potion. {rest}",
+  meltdown: [
+    "Bids went sideways all night. {1st} won, but nobody's popping confetti. {2nd} and {3rd} are nursing bruised pride. {rest}",
+    "The spells misfired left and right tonight. {1st} kept the wand steady. {2nd} and {3rd} weren't so lucky. {rest}",
+    "Negative points everywhere — this wasn't a card game, it was a potion gone very wrong. {1st} dodged the splash. {2nd} and {3rd} need a hot cocoa. {rest}",
+    "Someone forgot to put the lid on the cauldron. {1st} ducked in time. {2nd} and {3rd} took a face full of fizzy potion. {rest}",
   ],
   fallback: [
     "{1st} claims the title of Grand Wizard. {2nd} earns the rank of Apprentice. {rest}",
@@ -55,8 +55,8 @@ const SENTENCES = {
   tied_first: [
     "A shared prophecy! {1st} — the Wizard Crown must be split! {2nd} and {3rd} bow to the co-rulers. {rest}",
     "One throne, multiple wizards. {1st} share the crown in an unprecedented tie. {2nd} and {3rd} witnessed history. {rest}",
-    "The sorting spell malfunctioned — {1st} finished dead even! {2nd} and {3rd} watched the council scramble for extra crowns. {rest}",
-    "Not even the ancient oracle could separate {1st}. A tie at the top! {2nd} and {3rd} saw something truly rare. {rest}",
+    "The sorting spell came up even — {1st} finished dead level! {2nd} and {3rd} watched the council scramble for extra crowns. {rest}",
+    "Not even the oracle could separate {1st}. A tie at the top! {2nd} and {3rd} saw something truly rare. {rest}",
   ],
 };
 
@@ -251,11 +251,11 @@ export function getGameSummary(sortedPlayers, totalScores, completedRounds, allP
       category = 'close';
     }
 
-    // 5. Bloodbath
+    // 5. Meltdown (multiple players in the negative)
     if (category === 'fallback') {
       const negCount = sortedPlayers.filter(p => (totalScores[p.id] || 0) < 0).length;
       if (negCount >= 2) {
-        category = 'bloodbath';
+        category = 'meltdown';
       }
     }
 

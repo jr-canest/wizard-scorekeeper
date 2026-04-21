@@ -50,18 +50,26 @@ export const generateGameSummary = onCall(
     const runnerUpScore = sorted[1]?.score ?? 0;
     const margin = winnerScore - runnerUpScore;
 
+    // Always show the shame count explicitly — 0 included — so the model
+    // cannot hallucinate shame on players who didn't get any this game.
     const playerLines = sorted
       .map((p) => {
-        const shame = p.shamePoints ? ` (${p.shamePoints} shame)` : '';
-        return `  ${p.rank}. ${p.name}: ${p.score}${shame}`;
+        const shame = p.shamePoints || 0;
+        return `  ${p.rank}. ${p.name}: ${p.score} points, ${shame} shame point${shame === 1 ? '' : 's'} this game`;
       })
       .join('\n');
 
+    const shamedPlayers = sorted.filter((p) => (p.shamePoints || 0) > 0);
+    const shameSummary = shamedPlayers.length === 0
+      ? 'NO player received any shame points this game. Do NOT invent or imply shame points.'
+      : `Shamed this game: ${shamedPlayers.map((p) => `${p.name} (${p.shamePoints})`).join(', ')}. Every other player had ZERO shame — do not mention shame for anyone not in this list.`;
+
     const context = [
       `Wizard card game just ended. ${data.roundCount ?? '?'} rounds, ${players.length} players.`,
-      `Final standings:`,
+      `Final standings (scores + shame counts are from THIS game only):`,
       playerLines,
       `Winning margin: ${margin} points.`,
+      shameSummary,
       data.leadChanges != null ? `Lead changes during game: ${data.leadChanges}.` : null,
       data.comebackRank ? `Winner was in ${nth(data.comebackRank)} place at their lowest point.` : null,
       data.negativeCount ? `${data.negativeCount} players finished with negative scores.` : null,
@@ -74,7 +82,9 @@ export const generateGameSummary = onCall(
 
 ${context}
 
-Write a 2-3 sentence recap based on what actually happened in THIS game. The story might be a dominance blowout, a close nail-biter, a comeback from behind, chaos with many lead changes, or a bloodbath where everyone went negative. Call out shame points when they happened. Use the real numbers from the stats above.
+Write a 2-3 sentence recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, chaos with many lead changes, or a bloodbath where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data.
+
+CRITICAL: Only mention a player's shame points if the stats above explicitly list them as having shame this game. If the stats say "0 shame points this game" for a player, that player was NOT shamed — do not imply otherwise.
 
 Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, dealer's curse, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, curses, spellbound). Both should feel natural together.
 

@@ -75,6 +75,22 @@ const SCENARIOS = [
     },
   },
   {
+    label: 'No shame at all (verifying AI does not invent)',
+    data: {
+      players: [
+        { name: 'Jorge',  score: 200, rank: 1, shamePoints: 0 },
+        { name: 'Avi',    score: 150, rank: 2, shamePoints: 0 },
+        { name: 'Mona',   score: 100, rank: 3, shamePoints: 0 },
+      ],
+      roundCount: 8,
+      canadianRules: false,
+      leadChanges: 2,
+      biggestLead: 60,
+      comebackRank: null,
+      negativeCount: 0,
+    },
+  },
+  {
     label: 'Tied first',
     data: {
       players: [

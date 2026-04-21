@@ -13,8 +13,11 @@ const LINE_COLORS = [
   '#a5b4fc', // indigo
 ];
 
+// Easing (smoothstep)
+const easeInOut = (t) => t * t * (3 - 2 * t);
+
 export default function BarChartRace({ players, completedRounds, onDone }) {
-  const [progress, setProgress] = useState(0); // 0 to totalRounds, fractional during animation
+  const [progress, setProgress] = useState(0); // 0 = starting totals, totalRounds = final scores
   const [isPlaying, setIsPlaying] = useState(false);
   const animRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -24,7 +27,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
   const SECONDS_PER_ROUND = 1.2;
   const totalDuration = totalRounds * SECONDS_PER_ROUND * 1000;
 
-  // Assign stable colors per player
+  // Stable colors per player
   const playerColors = useMemo(() => {
     const colors = {};
     players.forEach((p, i) => {
@@ -33,85 +36,81 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     return colors;
   }, [players]);
 
-  // Pre-compute rank at each round (0-indexed rank, 0 = best)
-  const rankData = useMemo(() => {
-    const data = []; // data[roundIndex] = { playerId: rank }
+  /*
+   * scoreData[0] = before round 1 starts (all active players at their startingPoints, usually 0)
+   * scoreData[i] = after round i is scored, for i from 1..totalRounds
+   * Each entry: { scores: { playerId: number }, activePlayers: [ids] }
+   */
+  const scoreData = useMemo(() => {
+    const data = [];
     const totals = {};
-    players.forEach(p => { totals[p.id] = p.startingPoints || 0; });
+    players.forEach((p) => { totals[p.id] = p.startingPoints || 0; });
+
+    // Round 0 — starting state. A player is "active" if they played in round 1.
+    const initialActive = players.filter((p) => p.addedInRound <= 1);
+    data.push({
+      scores: { ...totals },
+      activePlayers: initialActive.map((p) => p.id),
+    });
 
     for (let ri = 0; ri < completedRounds.length; ri++) {
       const round = completedRounds[ri];
-      const active = players.filter(p => p.addedInRound <= round.roundNumber);
-
-      active.forEach(p => {
+      const active = players.filter((p) => p.addedInRound <= round.roundNumber);
+      active.forEach((p) => {
         if (round.scores?.[p.id] !== undefined) {
           totals[p.id] = (totals[p.id] || 0) + round.scores[p.id];
         }
       });
-
-      // Sort by score desc, assign ranks
-      const sorted = active
-        .map(p => ({ id: p.id, score: totals[p.id] || 0 }))
-        .sort((a, b) => b.score - a.score);
-
-      const ranks = {};
-      sorted.forEach((p, i) => { ranks[p.id] = i; });
-
       data.push({
-        ranks,
         scores: { ...totals },
-        activePlayers: active.map(p => p.id),
-        roundNumber: round.roundNumber,
+        activePlayers: active.map((p) => p.id),
       });
     }
     return data;
   }, [players, completedRounds]);
 
-  // Get interpolated rank for a player at fractional progress
-  const getRankAt = useCallback((playerId, t) => {
-    if (t <= 0) {
-      // Before round 1 — use round 0 order
-      const r0 = rankData[0];
-      return r0?.ranks[playerId] ?? -1;
+  // Global min/max for the Y-axis — include 0 as a baseline (everyone starts at 0).
+  const { minScore, maxScore } = useMemo(() => {
+    let min = 0;
+    let max = 0;
+    for (const entry of scoreData) {
+      for (const id of entry.activePlayers) {
+        const s = entry.scores[id];
+        if (s !== undefined) {
+          if (s < min) min = s;
+          if (s > max) max = s;
+        }
+      }
     }
-    const ri = Math.floor(t);
-    const frac = t - ri;
+    // Tiny padding so top/bottom values don't sit on the edge
+    const pad = Math.max(10, Math.ceil((max - min) * 0.08));
+    return { minScore: min - pad, maxScore: max + pad };
+  }, [scoreData]);
 
-    if (ri >= rankData.length - 1) {
-      const last = rankData[rankData.length - 1];
-      return last.ranks[playerId] ?? -1;
-    }
-
-    const curr = rankData[ri];
-    const next = rankData[ri + 1];
-    const currRank = curr.ranks[playerId];
-    const nextRank = next.ranks[playerId];
-
-    if (currRank === undefined) return nextRank ?? -1;
-    if (nextRank === undefined) return currRank;
-
-    // Smooth cubic interpolation
-    const ease = frac * frac * (3 - 2 * frac);
-    return currRank + (nextRank - currRank) * ease;
-  }, [rankData]);
-
-  // Get interpolated score at fractional progress
+  // Interpolate score for a player at fractional progress (0 = start, totalRounds = end)
   const getScoreAt = useCallback((playerId, t) => {
-    if (t <= 0) {
-      return rankData[0]?.scores[playerId] ?? 0;
-    }
-    const ri = Math.floor(t);
-    const frac = t - ri;
+    if (scoreData.length === 0) return 0;
+    if (t <= 0) return scoreData[0].scores[playerId] ?? 0;
+    if (t >= scoreData.length - 1) return scoreData[scoreData.length - 1].scores[playerId] ?? 0;
 
-    if (ri >= rankData.length - 1) {
-      return rankData[rankData.length - 1]?.scores[playerId] ?? 0;
-    }
+    const i = Math.floor(t);
+    const frac = t - i;
+    const curr = scoreData[i].scores[playerId];
+    const next = scoreData[i + 1].scores[playerId];
 
-    const currScore = rankData[ri]?.scores[playerId] ?? 0;
-    const nextScore = rankData[ri + 1]?.scores[playerId] ?? 0;
-    const ease = frac * frac * (3 - 2 * frac);
-    return Math.round(currScore + (nextScore - currScore) * ease);
-  }, [rankData]);
+    if (curr === undefined && next === undefined) return 0;
+    if (curr === undefined) return next;
+    if (next === undefined) return curr;
+
+    const e = easeInOut(frac);
+    return curr + (next - curr) * e;
+  }, [scoreData]);
+
+  // Is this player participating yet at fractional progress t?
+  const isActiveAt = useCallback((playerId, t) => {
+    const i = Math.min(scoreData.length - 1, Math.max(0, Math.floor(t)));
+    return scoreData[i]?.activePlayers.includes(playerId);
+  }, [scoreData]);
 
   // Animation loop
   const animate = useCallback((timestamp) => {
@@ -119,12 +118,11 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     const elapsed = timestamp - startTimeRef.current;
     const newProgress = startProgressRef.current + (elapsed / totalDuration) * totalRounds;
 
-    if (newProgress >= totalRounds - 1) {
-      setProgress(totalRounds - 1);
+    if (newProgress >= totalRounds) {
+      setProgress(totalRounds);
       setIsPlaying(false);
       return;
     }
-
     setProgress(newProgress);
     animRef.current = requestAnimationFrame(animate);
   }, [totalDuration, totalRounds]);
@@ -135,13 +133,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       startProgressRef.current = progress;
       animRef.current = requestAnimationFrame(animate);
     }
-    return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-    };
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, [isPlaying, animate]);
 
-  // Auto-start the replay shortly after mount so it plays once the game-over
-  // wipe/sparkles have landed.
+  // Auto-start after game-over wipe has landed
   useEffect(() => {
     const timer = setTimeout(() => {
       setProgress(0);
@@ -150,15 +145,8 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     return () => clearTimeout(timer);
   }, []);
 
-  const maxPlayers = useMemo(() =>
-    Math.max(...rankData.map(r => r.activePlayers.length)),
-    [rankData]
-  );
-
-  // Current round label
-  const currentRoundIndex = Math.min(Math.round(progress), totalRounds - 1);
-  const currentRoundNumber = rankData[currentRoundIndex]?.roundNumber ?? 1;
-  const isFinished = progress >= totalRounds - 1;
+  const currentRoundLabel = Math.min(totalRounds, Math.max(0, Math.round(progress)));
+  const isFinished = progress >= totalRounds;
 
   function handlePlayPause() {
     if (isFinished) {
@@ -171,13 +159,13 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
 
   function handleSkip() {
     if (animRef.current) cancelAnimationFrame(animRef.current);
-    setProgress(totalRounds - 1);
+    setProgress(totalRounds);
     setIsPlaying(false);
   }
 
   // SVG dimensions
   const svgWidth = 320;
-  const svgHeight = Math.max(180, maxPlayers * 36);
+  const svgHeight = 220;
   const leftPad = 0;
   const rightPad = 45; // space for name + score labels
   const topPad = 24;
@@ -185,50 +173,79 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
   const chartWidth = svgWidth - leftPad - rightPad;
   const chartHeight = svgHeight - topPad - bottomPad;
 
-  // Map round index to x position
-  const xForRound = (ri) => leftPad + (ri / Math.max(1, totalRounds - 1)) * chartWidth;
-  // Map rank to y position
-  const yForRank = (rank) => topPad + (rank / Math.max(1, maxPlayers - 1)) * chartHeight;
+  // X: round index (0..totalRounds) → pixel
+  const xForRound = (ri) => leftPad + (ri / Math.max(1, totalRounds)) * chartWidth;
+  // Y: score → pixel (higher score = smaller y)
+  const scoreRange = Math.max(1, maxScore - minScore);
+  const yForScore = (score) => topPad + ((maxScore - score) / scoreRange) * chartHeight;
 
-  // Build paths and current positions
+  // Pre-build the full path for each player (no animation, used for reveal via dasharray)
   const playerLines = useMemo(() => {
-    return players.map(p => {
-      // Build full path points
+    return players.map((p) => {
       const points = [];
-      for (let ri = 0; ri < rankData.length; ri++) {
-        const rank = rankData[ri].ranks[p.id];
-        if (rank !== undefined) {
-          points.push({ x: xForRound(ri), y: yForRank(rank), ri });
-        }
+      for (let ri = 0; ri < scoreData.length; ri++) {
+        const entry = scoreData[ri];
+        if (!entry.activePlayers.includes(p.id)) continue;
+        const score = entry.scores[p.id];
+        if (score === undefined) continue;
+        points.push({ x: xForRound(ri), y: yForScore(score), ri, score });
       }
-
-      // Build SVG path
       if (points.length < 2) return { id: p.id, path: '', points };
 
-      let d = `M ${points[0].x} ${points[0].y}`;
+      let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
       for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1];
         const curr = points[i];
         const cpx = (prev.x + curr.x) / 2;
-        d += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`;
+        d += ` C ${cpx.toFixed(2)} ${prev.y.toFixed(2)}, ${cpx.toFixed(2)} ${curr.y.toFixed(2)}, ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`;
       }
-
       return { id: p.id, path: d, points };
     });
-  }, [players, rankData, maxPlayers, totalRounds]);
+  }, [players, scoreData, totalRounds, minScore, maxScore]);
 
   const pathLengths = useRef({});
 
-  // How much of the path to show based on progress
+  // How much of the path to reveal based on progress (0..1 per player)
   const getPathReveal = (playerId) => {
-    const line = playerLines.find(l => l.id === playerId);
+    const line = playerLines.find((l) => l.id === playerId);
     if (!line || line.points.length < 2) return 0;
-    const firstRound = line.points[0].ri;
-    const lastRound = line.points[line.points.length - 1].ri;
-    const range = lastRound - firstRound;
+    const first = line.points[0].ri;
+    const last = line.points[line.points.length - 1].ri;
+    const range = last - first;
     if (range === 0) return 1;
-    return Math.min(1, Math.max(0, (progress - firstRound) / range));
+    return Math.min(1, Math.max(0, (progress - first) / range));
   };
+
+  // Gridlines at "nice" score intervals
+  const gridLines = useMemo(() => {
+    const step = pickStep(scoreRange);
+    const lines = [];
+    const start = Math.ceil(minScore / step) * step;
+    for (let v = start; v <= maxScore; v += step) {
+      lines.push(v);
+    }
+    return lines;
+  }, [minScore, maxScore, scoreRange]);
+
+  // Tie detection at current progress — offset labels slightly for tied players
+  const labelOffsets = useMemo(() => {
+    const active = players
+      .filter((p) => isActiveAt(p.id, progress))
+      .map((p) => ({ id: p.id, score: Math.round(getScoreAt(p.id, progress)) }));
+    const byScore = {};
+    active.forEach((a) => {
+      if (!byScore[a.score]) byScore[a.score] = [];
+      byScore[a.score].push(a.id);
+    });
+    const offsets = {};
+    Object.values(byScore).forEach((ids) => {
+      ids.forEach((id, idx) => {
+        // Each tied entry after the first gets pushed down by ~12px
+        offsets[id] = idx * 12;
+      });
+    });
+    return offsets;
+  }, [players, progress, getScoreAt, isActiveAt]);
 
   return (
     <div className="card-gold p-3 mb-4">
@@ -237,7 +254,9 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
         <div>
           <h3 className="text-gold-200 text-sm font-medium">Game Replay</h3>
           <p className="text-navy-200/60 text-xs">
-            Round {currentRoundNumber} of {totalRounds}
+            {currentRoundLabel === 0
+              ? `Start of game • ${totalRounds} rounds`
+              : `Round ${currentRoundLabel} of ${totalRounds}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -272,18 +291,29 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
         className="w-full"
         style={{ height: 'auto', maxHeight: '360px' }}
       >
-        {/* Faint horizontal gridlines */}
-        {Array.from({ length: maxPlayers }, (_, i) => (
-          <line
-            key={i}
-            x1={leftPad} x2={leftPad + chartWidth}
-            y1={yForRank(i)} y2={yForRank(i)}
-            stroke="#8a7a40" strokeOpacity="0.15" strokeWidth="0.5"
-          />
+        {/* Gridlines at nice intervals */}
+        {gridLines.map((v) => (
+          <g key={v}>
+            <line
+              x1={leftPad} x2={leftPad + chartWidth}
+              y1={yForScore(v)} y2={yForScore(v)}
+              stroke={v === 0 ? '#e6cc80' : '#8a7a40'}
+              strokeOpacity={v === 0 ? 0.35 : 0.15}
+              strokeWidth={v === 0 ? 0.8 : 0.5}
+              strokeDasharray={v === 0 ? '' : '2 3'}
+            />
+            <text
+              x={leftPad + 2} y={yForScore(v) - 2}
+              fill="#8a8a8a" fontSize="8" fontWeight="500"
+              opacity="0.7"
+            >
+              {v}
+            </text>
+          </g>
         ))}
 
         {/* Lines — revealed portion using dasharray */}
-        {playerLines.map(line => {
+        {playerLines.map((line) => {
           const reveal = getPathReveal(line.id);
           return (
             <path
@@ -293,7 +323,8 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
               stroke={playerColors[line.id]}
               strokeWidth="3"
               strokeLinecap="round"
-              ref={el => {
+              strokeLinejoin="round"
+              ref={(el) => {
                 if (el && !pathLengths.current[line.id]) {
                   pathLengths.current[line.id] = el.getTotalLength();
                 }
@@ -302,33 +333,29 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
               strokeDashoffset={
                 (pathLengths.current[line.id] || 1000) * (1 - reveal)
               }
+              style={{ opacity: reveal > 0 ? 1 : 0 }}
             />
           );
         })}
 
         {/* Moving dots + labels at current position */}
-        {players.map(p => {
-          const rank = getRankAt(p.id, progress);
-          if (rank < 0) return null;
-
-          const firstAppearance = rankData.findIndex(r => r.ranks[p.id] !== undefined);
-          if (firstAppearance < 0 || progress < firstAppearance) return null;
-
-          const x = xForRound(Math.min(progress, totalRounds - 1));
-          const y = yForRank(rank);
-          const score = getScoreAt(p.id, progress);
+        {players.map((p) => {
+          if (!isActiveAt(p.id, progress)) return null;
+          const rawScore = getScoreAt(p.id, progress);
+          const displayScore = Math.round(rawScore);
+          const x = xForRound(Math.min(progress, totalRounds));
+          const y = yForScore(rawScore);
+          const offset = labelOffsets[p.id] || 0;
 
           return (
             <g key={p.id}>
-              {/* Dot */}
               <circle
                 cx={x} cy={y} r="5"
                 fill={playerColors[p.id]}
                 stroke="#0e1a38" strokeWidth="1.5"
               />
-              {/* Name + score label */}
               <text
-                x={x + 10} y={y - 4}
+                x={x + 10} y={y - 4 + offset}
                 fill={playerColors[p.id]}
                 fontSize="10" fontWeight="600"
                 dominantBaseline="auto"
@@ -336,12 +363,12 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 {p.name}
               </text>
               <text
-                x={x + 10} y={y + 10}
+                x={x + 10} y={y + 10 + offset}
                 fill="#b0b8c8"
                 fontSize="9" fontWeight="500"
                 dominantBaseline="auto"
               >
-                {score}
+                {displayScore}
               </text>
             </g>
           );
@@ -349,4 +376,14 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       </svg>
     </div>
   );
+}
+
+// Choose a round-number step (10/20/25/50/100...) that gives ~3-5 gridlines
+function pickStep(range) {
+  const target = range / 4;
+  const candidates = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+  for (const c of candidates) {
+    if (c >= target) return c;
+  }
+  return candidates[candidates.length - 1];
 }

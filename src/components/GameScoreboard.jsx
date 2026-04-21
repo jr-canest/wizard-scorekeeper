@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
 import { saveGameResult, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
+import { isDemoMode } from '../utils/demoScenarios';
 import BarChartRace from './BarChartRace';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
@@ -86,8 +87,16 @@ function Sparkles() {
 }
 
 export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, onKeepPlaying, onNewGame, onShowHistory }) {
-  const sortedPlayers = [...players].sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
-  const completedRounds = rounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
+  // Memoize derived arrays so downstream components (BarChartRace is 60fps)
+  // don't bust their useMemo caches on every parent render.
+  const sortedPlayers = useMemo(
+    () => [...players].sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0)),
+    [players, totalScores]
+  );
+  const completedRounds = useMemo(
+    () => rounds.filter(r => r.scores && Object.keys(r.scores).length > 0),
+    [rounds]
+  );
   const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
   const [showSparkles, setShowSparkles] = useState(false);
@@ -107,8 +116,8 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
       const wipeTimer = setTimeout(() => setShowWipe(false), 1100);
       const sparkleEnd = setTimeout(() => setShowSparkles(false), 3000);
 
-      // Save game to Firebase (once)
-      if (!hasSaved.current) {
+      // Save game to Firebase (once). Demo mode skips this entirely.
+      if (!hasSaved.current && !isDemoMode()) {
         hasSaved.current = true;
         setSaveStatus('saving');
         const playerResults = sortedPlayers.map((player) => {
@@ -176,7 +185,8 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
   useEffect(() => {
     if (!isGameOver || aiFetchedRef.current) return;
     if (sortedPlayers.length < 2) return;
-    if (!isProduction()) return; // use fallback on localhost
+    // Skip AI on localhost except when running a demo preview.
+    if (!isProduction() && !isDemoMode()) return;
     aiFetchedRef.current = true;
 
     const payload = buildAISummaryPayload(sortedPlayers, totalScores, completedRounds, players, settings || {});

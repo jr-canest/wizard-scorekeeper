@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { PHASES } from './utils/constants';
 import SetupScreen from './components/SetupScreen';
@@ -12,6 +12,7 @@ import GameScoreboard from './components/GameScoreboard';
 import AddPlayerModal from './components/AddPlayerModal';
 import ConfirmDialog from './components/ConfirmDialog';
 import HistoryScreen from './components/HistoryScreen';
+import { getDemoScenario, getCurrentDemoName } from './utils/demoScenarios';
 
 function WizardLogo({ className = "h-8" }) {
   return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
@@ -101,6 +102,42 @@ export default function App() {
       }
     };
   }, []);
+
+  // ?demo=<name> — jump straight into a mock game-over screen, no real game
+  // state touched and no Firestore writes (isProduction() check still guards
+  // saveGameResult). The AI summary is allowed to run so you can preview it.
+  // Memoized so every App re-render doesn't build a fresh object (which would
+  // bust all the downstream memoization in GameScoreboard/BarChartRace).
+  const demoName = getCurrentDemoName();
+  const demoData = useMemo(
+    () => (demoName ? getDemoScenario(demoName) : null),
+    [demoName]
+  );
+  if (demoData) {
+    const clearDemo = () => {
+      window.history.replaceState({}, '', window.location.pathname);
+      window.location.reload();
+    };
+    return (
+      <>
+        <div className="fixed top-0 inset-x-0 z-[100] bg-gold-400/90 text-black text-xs font-bold py-1 text-center pointer-events-none">
+          DEMO: {demoName} — history not affected
+        </div>
+        <GameScoreboard
+          players={demoData.players}
+          rounds={demoData.rounds}
+          totalScores={demoData.totalScores}
+          shamePoints={demoData.shamePoints}
+          settings={demoData.settings}
+          isGameOver
+          onKeepPlaying={clearDemo}
+          onNewGame={clearDemo}
+          onShowHistory={() => setShowHistory(true)}
+        />
+        {showHistory && <HistoryScreen onClose={() => setShowHistory(false)} />}
+      </>
+    );
+  }
 
   // Resume game prompt
   if (!gameState && hasSavedGame) {

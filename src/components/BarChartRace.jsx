@@ -227,25 +227,60 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     return lines;
   }, [minScore, maxScore, scoreRange]);
 
-  // Tie detection at current progress — offset labels slightly for tied players
-  const labelOffsets = useMemo(() => {
+  // Label collision avoidance — sort active labels by Y, push overlapping
+  // ones down, and if the whole stack runs past the chart bottom, shift it
+  // up so nothing clips. Keeps the dot on the real score line; the label
+  // block (name + score) is moved as a unit to avoid text overlap.
+  const LABEL_BLOCK_HEIGHT = 22; // name (10px) + score (9px) + a little breathing room
+  const labelPositions = useMemo(() => {
     const active = players
       .filter((p) => isActiveAt(p.id, progress))
-      .map((p) => ({ id: p.id, score: Math.round(getScoreAt(p.id, progress)) }));
-    const byScore = {};
-    active.forEach((a) => {
-      if (!byScore[a.score]) byScore[a.score] = [];
-      byScore[a.score].push(a.id);
-    });
-    const offsets = {};
-    Object.values(byScore).forEach((ids) => {
-      ids.forEach((id, idx) => {
-        // Each tied entry after the first gets pushed down by ~12px
-        offsets[id] = idx * 12;
+      .map((p) => {
+        const rawScore = getScoreAt(p.id, progress);
+        return {
+          id: p.id,
+          dotY: yForScore(rawScore),
+        };
       });
-    });
-    return offsets;
-  }, [players, progress, getScoreAt, isActiveAt]);
+
+    if (active.length === 0) return {};
+
+    // Sort by actual dot Y (top of chart first)
+    active.sort((a, b) => a.dotY - b.dotY);
+
+    // First pass: stack labels downward from each dot's ideal Y
+    const positions = {};
+    const ordered = [];
+    let prevLabelY = -Infinity;
+    for (const p of active) {
+      let labelY = p.dotY - 4;
+      if (labelY < prevLabelY + LABEL_BLOCK_HEIGHT) {
+        labelY = prevLabelY + LABEL_BLOCK_HEIGHT;
+      }
+      positions[p.id] = labelY;
+      ordered.push(p.id);
+      prevLabelY = labelY;
+    }
+
+    // Second pass: if the stack extends past the chart bottom, shift
+    // everyone up. If that pushes the top past the chart top, shift down
+    // just enough to bring the top into view (preferring the top stay
+    // visible over the bottom).
+    const chartTop = 4; // allow labels a touch above topPad since names are small
+    const chartBottom = svgHeight - 4;
+    const lastLabelBottom = positions[ordered[ordered.length - 1]] + 14;
+    if (lastLabelBottom > chartBottom) {
+      const overflow = lastLabelBottom - chartBottom;
+      for (const id of ordered) positions[id] -= overflow;
+    }
+    const firstLabelTop = positions[ordered[0]];
+    if (firstLabelTop < chartTop) {
+      const underflow = chartTop - firstLabelTop;
+      for (const id of ordered) positions[id] += underflow;
+    }
+
+    return positions;
+  }, [players, progress, getScoreAt, isActiveAt, minScore, maxScore]);
 
   return (
     <div className="card-gold p-3 mb-4">
@@ -344,18 +379,32 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
           const rawScore = getScoreAt(p.id, progress);
           const displayScore = Math.round(rawScore);
           const x = xForRound(Math.min(progress, totalRounds));
-          const y = yForScore(rawScore);
-          const offset = labelOffsets[p.id] || 0;
+          const dotY = yForScore(rawScore);
+          // Label may be pushed away from the dot to avoid overlap with
+          // other labels. If so, draw a faint connector from the dot to the label.
+          const labelY = labelPositions[p.id] ?? (dotY - 4);
+          const labelCenterY = labelY + 5; // roughly the middle of the two-line block
+          const dotToLabelOffset = Math.abs(labelCenterY - dotY);
+          const needsConnector = dotToLabelOffset > 7;
 
           return (
             <g key={p.id}>
+              {needsConnector && (
+                <line
+                  x1={x + 5} y1={dotY}
+                  x2={x + 10} y2={labelCenterY}
+                  stroke={playerColors[p.id]}
+                  strokeOpacity="0.35"
+                  strokeWidth="1"
+                />
+              )}
               <circle
-                cx={x} cy={y} r="5"
+                cx={x} cy={dotY} r="5"
                 fill={playerColors[p.id]}
                 stroke="#0e1a38" strokeWidth="1.5"
               />
               <text
-                x={x + 10} y={y - 4 + offset}
+                x={x + 10} y={labelY}
                 fill={playerColors[p.id]}
                 fontSize="10" fontWeight="600"
                 dominantBaseline="auto"
@@ -363,7 +412,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 {p.name}
               </text>
               <text
-                x={x + 10} y={y + 10 + offset}
+                x={x + 10} y={labelY + 14}
                 fill="#b0b8c8"
                 fontSize="9" fontWeight="500"
                 dominantBaseline="auto"

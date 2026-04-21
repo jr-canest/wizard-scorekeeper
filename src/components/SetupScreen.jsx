@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../utils/constants';
 import { getMaxRounds } from '../utils/roundCalculations';
-import { searchPlayers } from '../utils/firebase';
+import { searchPlayers, isProduction } from '../utils/firebase';
+import { getDemoNames } from '../utils/demoScenarios';
 
 export default function SetupScreen({ onStartGame, onShowHistory }) {
   const [players, setPlayers] = useState([
@@ -295,6 +296,28 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
         >
           📜 Player History
         </button>
+      )}
+
+      {/* Dev-only demo panel — localhost only, never shows in production */}
+      {!isProduction() && (
+        <div className="mt-6 p-3 rounded-xl border border-dashed border-pink-400/40 bg-pink-500/5">
+          <p className="text-pink-300/80 text-xs font-semibold mb-2">🧪 Demo scenarios (dev only)</p>
+          <p className="text-pink-300/50 text-[11px] mb-2">
+            Jumps to game-over screen with mock data. Does NOT save to history.
+            AI summary runs so you can preview it.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {getDemoNames().map((name) => (
+              <a
+                key={name}
+                href={`?demo=${name}`}
+                className="px-2.5 py-1 rounded-md text-xs font-medium text-pink-200 bg-pink-500/20 border border-pink-400/30 active:bg-pink-500/40"
+              >
+                {name}
+              </a>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

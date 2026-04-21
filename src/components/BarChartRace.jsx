@@ -227,28 +227,21 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     return lines;
   }, [minScore, maxScore, scoreRange]);
 
-  // Label collision avoidance — sort active labels by Y, push overlapping
-  // ones down, and if the whole stack runs past the chart bottom, shift it
-  // up so nothing clips. Keeps the dot on the real score line; the label
-  // block (name + score) is moved as a unit to avoid text overlap.
-  const LABEL_BLOCK_HEIGHT = 22; // name (10px) + score (9px) + a little breathing room
-  const labelPositions = useMemo(() => {
+  // Label collision avoidance — compute TARGET positions for each player:
+  // sort by Y, stack 22px apart, then clamp stack inside chart bounds.
+  const LABEL_BLOCK_HEIGHT = 22;
+  const targetLabelPositions = useMemo(() => {
     const active = players
       .filter((p) => isActiveAt(p.id, progress))
       .map((p) => {
         const rawScore = getScoreAt(p.id, progress);
-        return {
-          id: p.id,
-          dotY: yForScore(rawScore),
-        };
+        return { id: p.id, dotY: yForScore(rawScore) };
       });
 
     if (active.length === 0) return {};
 
-    // Sort by actual dot Y (top of chart first)
     active.sort((a, b) => a.dotY - b.dotY);
 
-    // First pass: stack labels downward from each dot's ideal Y
     const positions = {};
     const ordered = [];
     let prevLabelY = -Infinity;
@@ -262,11 +255,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       prevLabelY = labelY;
     }
 
-    // Second pass: if the stack extends past the chart bottom, shift
-    // everyone up. If that pushes the top past the chart top, shift down
-    // just enough to bring the top into view (preferring the top stay
-    // visible over the bottom).
-    const chartTop = 4; // allow labels a touch above topPad since names are small
+    const chartTop = 4;
     const chartBottom = svgHeight - 4;
     const lastLabelBottom = positions[ordered[ordered.length - 1]] + 10;
     if (lastLabelBottom > chartBottom) {
@@ -281,6 +270,37 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
 
     return positions;
   }, [players, progress, getScoreAt, isActiveAt, minScore, maxScore]);
+
+  // Displayed label positions smoothly approach the targets via exponential
+  // smoothing. This handles rank-swap jumps gracefully (label slides to its
+  // new position over ~8 frames) without the browser-side CSS-transition
+  // desync that happens when the target moves every frame. Stored in a ref
+  // so we can read AND update it during render without triggering extra
+  // re-renders; `progress` drives the render cadence.
+  const displayedLabelYRef = useRef({});
+  // Fraction of the remaining distance closed each frame. 0.22 → ~8 frames
+  // (~130ms) to cover a big jump, but barely perceptible lag during normal
+  // smooth tracking of a moving dot.
+  const LABEL_SMOOTHING = 0.22;
+  const labelPositions = {};
+  for (const p of players) {
+    const target = targetLabelPositions[p.id];
+    if (target === undefined) {
+      delete displayedLabelYRef.current[p.id];
+      continue;
+    }
+    const curr = displayedLabelYRef.current[p.id];
+    let next;
+    if (curr === undefined) {
+      next = target; // first frame — snap to target
+    } else {
+      next = curr + (target - curr) * LABEL_SMOOTHING;
+      // Snap when close enough to prevent jitter from accumulated rounding.
+      if (Math.abs(next - target) < 0.3) next = target;
+    }
+    displayedLabelYRef.current[p.id] = next;
+    labelPositions[p.id] = next;
+  }
 
   return (
     <div className="card-gold p-3 mb-4">
@@ -402,37 +422,26 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 stroke="#0e1a38" strokeWidth="1.5"
               />
               {/*
-                Label block wrapped in two nested <g>s:
-                  outer = X position (no transition — tracks the dot instantly)
-                  inner = Y position (transitions so rank swaps slide smoothly)
-                The dot stays on the real score line (no transition) so the
-                data line stays accurate.
+                Labels position via `y` attribute only — the Y value is already
+                smoothed per-frame against the target (see displayedLabelYRef
+                above), so rank swaps slide smoothly without CSS transitions.
               */}
-              <g style={{ transform: `translateX(${x + 10}px)` }}>
-                <g
-                  style={{
-                    transform: `translateY(${labelY}px)`,
-                    transition: 'transform 260ms cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                >
-                  <text
-                    x="0" y="0"
-                    fill={playerColors[p.id]}
-                    fontSize="10" fontWeight="600"
-                    dominantBaseline="auto"
-                  >
-                    {p.name}
-                  </text>
-                  <text
-                    x="0" y="10"
-                    fill="#b0b8c8"
-                    fontSize="9" fontWeight="500"
-                    dominantBaseline="auto"
-                  >
-                    {displayScore}
-                  </text>
-                </g>
-              </g>
+              <text
+                x={x + 10} y={labelY}
+                fill={playerColors[p.id]}
+                fontSize="10" fontWeight="600"
+                dominantBaseline="auto"
+              >
+                {p.name}
+              </text>
+              <text
+                x={x + 10} y={labelY + 10}
+                fill="#b0b8c8"
+                fontSize="9" fontWeight="500"
+                dominantBaseline="auto"
+              >
+                {displayScore}
+              </text>
             </g>
           );
         })}

@@ -268,7 +268,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     // visible over the bottom).
     const chartTop = 4; // allow labels a touch above topPad since names are small
     const chartBottom = svgHeight - 4;
-    const lastLabelBottom = positions[ordered[ordered.length - 1]] + 14;
+    const lastLabelBottom = positions[ordered[ordered.length - 1]] + 10;
     if (lastLabelBottom > chartBottom) {
       const overflow = lastLabelBottom - chartBottom;
       for (const id of ordered) positions[id] -= overflow;
@@ -412,7 +412,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 {p.name}
               </text>
               <text
-                x={x + 10} y={labelY + 14}
+                x={x + 10} y={labelY + 10}
                 fill="#b0b8c8"
                 fontSize="9" fontWeight="500"
                 dominantBaseline="auto"

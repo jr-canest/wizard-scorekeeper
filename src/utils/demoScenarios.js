@@ -97,6 +97,28 @@ function distributeInto(arr, from, to, total) {
   }
 }
 
+// Build rounds from an explicit 2D array of per-round deltas: deltas[roundIndex][playerIndex].
+function buildRoundsFromDeltas(players, deltas) {
+  const rounds = [];
+  for (let ri = 0; ri < deltas.length; ri++) {
+    const cardsDealt = Math.min(ri + 1, Math.floor(60 / players.length));
+    const scores = {};
+    players.forEach((p, pi) => {
+      scores[p.id] = deltas[ri][pi];
+    });
+    rounds.push({
+      roundNumber: ri + 1,
+      cardsDealt,
+      dealerIndex: ri % players.length,
+      trumpSuit: ['spades', 'hearts', 'diamonds', 'clubs', null][ri % 5],
+      bids: {},
+      tricks: {},
+      scores,
+    });
+  }
+  return rounds;
+}
+
 function totalsFrom(players, rounds) {
   const totals = {};
   players.forEach((p) => { totals[p.id] = p.startingPoints || 0; });
@@ -175,6 +197,31 @@ export const SCENARIOS = {
       totalScores: totalsFrom(players, rounds),
       shamePoints: {},
       settings: { canadianRules: false },
+    };
+  },
+  // Many lead changes and rank swaps, great for showing label animation
+  chaotic: () => {
+    const players = buildPlayers(4);
+    // Deltas chosen so ranks swap almost every round (totals: 190, 160, 150, 120)
+    const deltas = [
+      [ 40, -10, -20,  20], //  40, -10, -20,  20  → Jorge, Stefan, Avi, Mona
+      [-30,  50,  40, -10], //  10,  40,  20,  10  → Avi, Mona, Jorge/Stefan tied
+      [ 30, -20,  30,  20], //  40,  20,  50,  30  → Mona, Jorge, Stefan, Avi
+      [ 20,  40, -30,  30], //  60,  60,  20,  60  → 3-way tie
+      [-10,  30,  40, -20], //  50,  90,  60,  40  → Avi, Stefan, Jorge, Mona
+      [ 60, -30,  30,  50], // 110,  60,  90,  90  → Jorge, Mona/Stefan tied, Avi
+      [ 30,  50,  10, -20], // 140, 110, 100,  70  → Jorge, Avi, Mona, Stefan
+      [-10,  40,  30,  40], // 130, 150, 130, 110  → Avi, Jorge/Mona tied, Stefan
+      [ 20, -20,  40,  20], // 150, 130, 170, 130  → Mona, Jorge, Avi/Stefan tied
+      [ 40,  30, -20, -10], // 190, 160, 150, 120  → Jorge, Avi, Mona, Stefan
+    ];
+    const rounds = buildRoundsFromDeltas(players, deltas);
+    return {
+      players,
+      rounds,
+      totalScores: totalsFrom(players, rounds),
+      shamePoints: { [players[1].id]: 1, [players[3].id]: 2 },
+      settings: { canadianRules: true },
     };
   },
   big: () => {

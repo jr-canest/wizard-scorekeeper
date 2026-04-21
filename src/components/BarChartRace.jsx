@@ -380,10 +380,8 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
           const displayScore = Math.round(rawScore);
           const x = xForRound(Math.min(progress, totalRounds));
           const dotY = yForScore(rawScore);
-          // Label may be pushed away from the dot to avoid overlap with
-          // other labels. If so, draw a faint connector from the dot to the label.
           const labelY = labelPositions[p.id] ?? (dotY - 4);
-          const labelCenterY = labelY + 5; // roughly the middle of the two-line block
+          const labelCenterY = labelY + 5;
           const dotToLabelOffset = Math.abs(labelCenterY - dotY);
           const needsConnector = dotToLabelOffset > 7;
 
@@ -403,22 +401,34 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 fill={playerColors[p.id]}
                 stroke="#0e1a38" strokeWidth="1.5"
               />
-              <text
-                x={x + 10} y={labelY}
-                fill={playerColors[p.id]}
-                fontSize="10" fontWeight="600"
-                dominantBaseline="auto"
+              {/*
+                Label block wrapped in a <g> with a CSS transform so rank swaps
+                slide the name + score instead of cutting. The dot stays on the
+                real score line (no transition) so the data stays accurate.
+              */}
+              <g
+                style={{
+                  transform: `translate(${x + 10}px, ${labelY}px)`,
+                  transition: 'transform 260ms cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
               >
-                {p.name}
-              </text>
-              <text
-                x={x + 10} y={labelY + 10}
-                fill="#b0b8c8"
-                fontSize="9" fontWeight="500"
-                dominantBaseline="auto"
-              >
-                {displayScore}
-              </text>
+                <text
+                  x="0" y="0"
+                  fill={playerColors[p.id]}
+                  fontSize="10" fontWeight="600"
+                  dominantBaseline="auto"
+                >
+                  {p.name}
+                </text>
+                <text
+                  x="0" y="10"
+                  fill="#b0b8c8"
+                  fontSize="9" fontWeight="500"
+                  dominantBaseline="auto"
+                >
+                  {displayScore}
+                </text>
+              </g>
             </g>
           );
         })}

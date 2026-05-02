@@ -299,7 +299,7 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
       )}
 
       <a
-        href="https://jr-canest.github.io/wizard-multiplayer/"
+        href="https://wizard-multiplayer.web.app/"
         className="block w-full mt-3 py-2.5 rounded-xl text-sm font-medium text-gold-200 border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60 text-center no-underline"
       >
         ↗ Play Multiplayer

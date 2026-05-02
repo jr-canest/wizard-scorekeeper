@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/wizard-scorekeeper/',
+  // Firebase Hosting serves at the site root.
+  base: '/',
   server: {
     port: 5180,
     strictPort: true,

@@ -298,6 +298,13 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
         </button>
       )}
 
+      <a
+        href="https://jr-canest.github.io/wizard-multiplayer/"
+        className="block w-full mt-3 py-2.5 rounded-xl text-sm font-medium text-gold-200 border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60 text-center no-underline"
+      >
+        ↗ Play Multiplayer
+      </a>
+
       {/* Dev-only demo panel — localhost only, never shows in production */}
       {!isProduction() && (
         <div className="mt-6 p-3 rounded-xl border border-dashed border-pink-400/40 bg-pink-500/5">

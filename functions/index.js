@@ -64,6 +64,13 @@ export const generateGameSummary = onCall(
       ? 'NO player received any shame points this game. Do NOT invent or imply shame points.'
       : `Shamed this game: ${shamedPlayers.map((p) => `${p.name} (${p.shamePoints})`).join(', ')}. Every other player had ZERO shame — do not mention shame for anyone not in this list.`;
 
+    // Optional richer signals (multiplayer fills these in from per-round logs).
+    const bestRound = data.bestSingleRound;
+    const worstRound = data.worstSingleRound;
+    const mostExact = data.mostExactBids;
+    const mostMissed = data.mostMissedBids;
+    const finalRoundLeader = data.finalRoundLeader;
+
     const context = [
       `Wizard card game just ended. ${data.roundCount ?? '?'} rounds, ${players.length} players.`,
       `Final standings (scores + shame counts are from THIS game only):`,
@@ -74,6 +81,24 @@ export const generateGameSummary = onCall(
       data.comebackRank ? `Winner was in ${nth(data.comebackRank)} place at their lowest point.` : null,
       data.negativeCount ? `${data.negativeCount} players finished with negative scores.` : null,
       data.canadianRules ? `Canadian rules were on (dealer restriction).` : null,
+      bestRound && bestRound.delta >= 20
+        ? `Biggest single-round haul: ${bestRound.name} scored ${bestRound.delta > 0 ? '+' : ''}${bestRound.delta} in round ${bestRound.round}.`
+        : null,
+      worstRound && worstRound.delta <= -20
+        ? `Worst single-round bust: ${worstRound.name} scored ${worstRound.delta} in round ${worstRound.round}.`
+        : null,
+      mostExact && mostExact.count >= 2
+        ? `Most exact bids: ${mostExact.name} nailed ${mostExact.count} rounds clean.`
+        : null,
+      mostMissed && mostMissed.count >= 2
+        ? `Most busted bids: ${mostMissed.name} missed ${mostMissed.count} rounds.`
+        : null,
+      finalRoundLeader && (data.roundCount ?? 0) >= 2
+        ? `Final round MVP: ${finalRoundLeader.name} (${finalRoundLeader.delta > 0 ? '+' : ''}${finalRoundLeader.delta}).`
+        : null,
+      typeof data.wizardsPlayed === 'number' && typeof data.jestersPlayed === 'number'
+        ? `Wizards played: ${data.wizardsPlayed}. Jesters played: ${data.jestersPlayed}.`
+        : null,
     ]
       .filter(Boolean)
       .join('\n');
@@ -82,7 +107,7 @@ export const generateGameSummary = onCall(
 
 ${context}
 
-Write a 2-3 sentence recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, a chaotic mess with many lead changes, or a meltdown where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data.
+Write a recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, a chaotic mess with many lead changes, or a meltdown where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data. Lean on the most specific, juicy stat you have (a +50 round, a 4-miss streak, a Wizard at the wrong moment) instead of generic adjectives.
 
 CRITICAL: Only mention a player's shame points if the stats above explicitly list them as having shame this game. If the stats say "0 shame points this game" for a player, that player was NOT shamed — do not imply otherwise.
 
@@ -95,7 +120,7 @@ IMPORTANT: mention EVERY player by name at least once — no player should be le
 FORMATTING RULES (strict):
 - Wrap each player name's first appearance in HTML <b>Name</b> tags. Example: <b>Alice</b>. NEVER use markdown bold like **Alice** — it will render as literal asterisks.
 - Output ONLY the recap text. No headers, no titles, no markdown (# or ## or ---), no bullet points, no quotes around the whole thing, no preamble like "Here's the recap:".
-- One flowing paragraph of 2-3 sentences, under 65 words total.
+- One flowing paragraph of 3-4 sentences, 60-95 words. Use the extra room to call out a specific moment or stat from the data above (e.g. a big single-round haul, a bust, an exact-bid streak) rather than padding with generic flavor.
 - Never use "they" or "their" — say names directly.
 
 Style: funny, a little roast-y, specific to the game.`;
@@ -104,7 +129,7 @@ Style: funny, a little roast-y, specific to the game.`;
     try {
       const message = await client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 200,
+        max_tokens: 320,
         temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });

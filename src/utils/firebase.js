@@ -58,20 +58,24 @@ export function isProduction() {
 
 /**
  * Find or create a player by name (case-insensitive).
- * Returns { id, name, nameLower, gamesPlayed, wins, totalScore, totalShamePoints }
+ * Matches against `nameLower` first, then `aliases` (e.g. "Neto" → "Manuel / Neto").
  */
 export async function findOrCreatePlayer(name) {
   const nameLower = name.trim().toLowerCase();
   const playersRef = collection(db, 'players');
-  const q = query(playersRef, where('nameLower', '==', nameLower), limit(1));
-  const snapshot = await getDocs(q);
 
-  if (!snapshot.empty) {
-    const docSnap = snapshot.docs[0];
-    return { id: docSnap.id, ...docSnap.data() };
+  const byName = await getDocs(query(playersRef, where('nameLower', '==', nameLower), limit(1)));
+  if (!byName.empty) {
+    const d = byName.docs[0];
+    return { id: d.id, ...d.data() };
   }
 
-  // Create new player
+  const byAlias = await getDocs(query(playersRef, where('aliases', 'array-contains', nameLower), limit(1)));
+  if (!byAlias.empty) {
+    const d = byAlias.docs[0];
+    return { id: d.id, ...d.data() };
+  }
+
   const newPlayer = {
     name: name.trim(),
     nameLower,
@@ -81,6 +85,7 @@ export async function findOrCreatePlayer(name) {
     bestScore: null,
     worstScore: null,
     totalShamePoints: 0,
+    aliases: [],
     createdAt: serverTimestamp(),
   };
   const docRef = await addDoc(playersRef, newPlayer);
@@ -88,24 +93,26 @@ export async function findOrCreatePlayer(name) {
 }
 
 /**
- * Search players by name prefix (for autocomplete).
- * Returns array of { id, name, gamesPlayed, wins, ... }
+ * Search players by name- or alias-prefix (for autocomplete).
+ * Fetches all players and filters client-side so we can match aliases — fine at this scale (~tens of players).
  */
 export async function searchPlayers(prefix, maxResults = 10) {
   if (!prefix || prefix.trim().length === 0) return [];
   const lower = prefix.trim().toLowerCase();
-  const upperBound = lower.slice(0, -1) + String.fromCharCode(lower.charCodeAt(lower.length - 1) + 1);
 
-  const playersRef = collection(db, 'players');
-  const q = query(
-    playersRef,
-    where('nameLower', '>=', lower),
-    where('nameLower', '<', upperBound),
-    orderBy('nameLower'),
-    limit(maxResults)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snapshot = await getDocs(collection(db, 'players'));
+  const matches = [];
+  for (const d of snapshot.docs) {
+    const p = { id: d.id, ...d.data() };
+    const nameHit = typeof p.nameLower === 'string' && p.nameLower.startsWith(lower);
+    const aliasHit = Array.isArray(p.aliases) && p.aliases.some(a => typeof a === 'string' && a.startsWith(lower));
+    if (nameHit || aliasHit) matches.push({ ...p, _nameHit: nameHit });
+  }
+  matches.sort((a, b) => {
+    if (a._nameHit !== b._nameHit) return a._nameHit ? -1 : 1;
+    return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);
+  });
+  return matches.slice(0, maxResults).map(({ _nameHit, ...p }) => p);
 }
 
 /**

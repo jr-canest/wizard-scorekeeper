@@ -91,7 +91,7 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
   const dragState = useRef({ startY: 0 });
 
   function handleDragStart(e, index) {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+    if (e.target.closest && e.target.closest('input, button')) return;
     e.preventDefault();
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     dragState.current = { startY: clientY };

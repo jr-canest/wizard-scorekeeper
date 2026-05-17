@@ -24,6 +24,13 @@
   --color-navy-900: #080e1f;
 }
 
+html, body {
+  /* Prevents iOS rubber-band scrolling past the bottom of the page
+     when the content fits inside the viewport. Otherwise you can pull
+     up to reveal empty space below the content. */
+  overscroll-behavior-y: contain;
+}
+
 body {
   margin: 0;
   background: linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%);

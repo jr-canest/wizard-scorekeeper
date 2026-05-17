@@ -139,7 +139,7 @@ export default function HistoryScreen({ onClose }) {
   return (
     <div className="fixed inset-0 z-40 overflow-auto"
       style={{ background: 'linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%)' }}>
-      <div className="p-4 max-w-lg mx-auto">
+      <div className="p-4 max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">History</h2>

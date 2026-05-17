@@ -226,7 +226,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
       {showWipe && <WhiteWipe />}
       {showSparkles && <Sparkles />}
 
-      <div className={`p-4 max-w-lg mx-auto transition-opacity duration-700 ${
+      <div className={`p-4 max-w-md mx-auto transition-opacity duration-700 ${
         isGameOver && !contentVisible ? 'opacity-0' : 'opacity-100'
       }`}>
         {/* Header */}

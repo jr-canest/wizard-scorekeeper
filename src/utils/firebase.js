@@ -6,7 +6,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   addDoc,
   updateDoc,
   query,
@@ -147,6 +146,8 @@ export async function searchPlayers(prefix, maxResults = 10) {
     if (a._nameHit !== b._nameHit) return a._nameHit ? -1 : 1;
     return (b.gamesPlayed || 0) - (a.gamesPlayed || 0);
   });
+  // Strip the internal _nameHit sort helper before returning.
+  // eslint-disable-next-line no-unused-vars
   return matches.slice(0, maxResults).map(({ _nameHit, ...p }) => p);
 }
 

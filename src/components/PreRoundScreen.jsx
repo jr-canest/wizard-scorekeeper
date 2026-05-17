@@ -12,7 +12,6 @@ export default function PreRoundScreen({
   totalScores,
   trumpSuit,
   isLastRound,
-  lastRoundTrumpChoice,
   onStartRound,
   onSelectTrump,
   onReorderPlayers,

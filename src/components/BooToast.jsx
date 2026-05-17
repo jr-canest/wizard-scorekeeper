@@ -9,6 +9,9 @@ export default function BooToast({ message, onDone }) {
 
   useEffect(() => {
     if (!message) return;
+    // Triggers the in-animation immediately when a new message arrives.
+    // onDone is intentionally omitted from deps so a parent recreating
+    // the callback doesn't restart the toast.
     setVisible(true);
     const hide = setTimeout(() => setVisible(false), 1300);
     const done = setTimeout(() => onDone?.(), 1600);
@@ -16,6 +19,7 @@ export default function BooToast({ message, onDone }) {
       clearTimeout(hide);
       clearTimeout(done);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message]);
 
   if (!message) return null;

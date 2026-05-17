@@ -78,6 +78,10 @@ export default function HistoryScreen({ onClose }) {
   }
 
   useEffect(() => {
+    // Mount-time data fetch — loading/error are state-backed because
+    // the .then/.catch resolve asynchronously and the UI needs to
+    // re-render to reflect each transition.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
     Promise.all([getAllPlayers(), getRecentGames(30)])

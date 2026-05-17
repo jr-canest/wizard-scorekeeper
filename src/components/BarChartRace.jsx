@@ -112,8 +112,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     return scoreData[i]?.activePlayers.includes(playerId);
   }, [scoreData]);
 
-  // Animation loop
-  const animate = useCallback((timestamp) => {
+  // Animation loop. Named function expression so the rAF callback can
+  // re-schedule itself without referencing the outer `animate` binding
+  // (which the lint sees as a TDZ reference inside its own initializer).
+  const animate = useCallback(function tick(timestamp) {
     if (!startTimeRef.current) startTimeRef.current = timestamp;
     const elapsed = timestamp - startTimeRef.current;
     const newProgress = startProgressRef.current + (elapsed / totalDuration) * totalRounds;
@@ -124,7 +126,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       return;
     }
     setProgress(newProgress);
-    animRef.current = requestAnimationFrame(animate);
+    animRef.current = requestAnimationFrame(tick);
   }, [totalDuration, totalRounds]);
 
   useEffect(() => {
@@ -134,6 +136,9 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       animRef.current = requestAnimationFrame(animate);
     }
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+    // progress is read once at start via the ref — including it in deps
+    // would restart the rAF on every progress tick (infinite loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, animate]);
 
   // Auto-start after game-over wipe has landed
@@ -201,6 +206,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       }
       return { id: p.id, path: d, points };
     });
+    // xForRound + yForScore close over totalRounds/min/max already
+    // in the dep list — adding the functions themselves would force a
+    // re-memo every render (they're re-created on each render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players, scoreData, totalRounds, minScore, maxScore]);
 
   const pathLengths = useRef({});
@@ -269,6 +278,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     }
 
     return positions;
+    // yForScore is re-created each render but only reads minScore/maxScore
+    // (already in deps), so it'd just churn the memo without changing the
+    // output.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players, progress, getScoreAt, isActiveAt, minScore, maxScore]);
 
   // Displayed label positions smoothly approach the targets via exponential

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../utils/constants';
 import { getMaxRounds } from '../utils/roundCalculations';
 import { searchPlayers, isProduction } from '../utils/firebase';

@@ -14,6 +14,9 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
   const totalBids = Object.values(bids).reduce((s, b) => s + b, 0);
   const bidsEntered = Object.keys(bids).length;
 
+  // React Compiler check flags this pattern but it's correct under
+  // React 18/19 — no behavior change from the manual useCallback.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const handleShameConfirm = useCallback(() => {
     if (shameTarget) {
       playBooSound();

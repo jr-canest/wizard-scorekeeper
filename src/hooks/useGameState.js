@@ -27,6 +27,9 @@ export function useGameState() {
   useEffect(() => {
     const saved = loadState();
     if (saved && saved.players && saved.players.length >= 2) {
+      // Once-on-mount hydrate from localStorage — there's no
+      // serializable equivalent we could compute in render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHasSavedGame(true);
     }
   }, []);

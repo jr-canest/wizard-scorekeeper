@@ -109,6 +109,8 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
   useEffect(() => {
     if (isGameOver) {
+      // Trigger the game-over wipe + sparkles sequence the moment the
+      // component is told the game ended.
       setShowWipe(true);
       setShowSparkles(true);
       playSparkleSound();
@@ -147,6 +149,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         clearTimeout(sparkleEnd);
       };
     }
+    // Save / animation kicks off once at game-over. The other deps are
+    // game data that's already settled by then — re-running on each
+    // mutation would re-save and re-fire the animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGameOver]);
 
   function getRunningTotal(playerId, upToIndex) {
@@ -171,10 +177,13 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     return scores.filter(([, s]) => s === maxScore).map(([id]) => id);
   }
 
-  // Fallback summary (computed immediately, shown while AI is loading or if AI fails)
+  // Fallback summary (computed immediately, shown while AI is loading or if AI fails).
+  // Intentionally depends only on `isGameOver` so the summary text doesn't
+  // change while we wait for the AI fetch — the snapshot at game-end is final.
   const fallbackSummary = useMemo(() =>
     isGameOver ? getGameSummary(sortedPlayers, totalScores, completedRounds, players) : '',
-    [isGameOver] // only compute once when game ends
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isGameOver]
   );
 
   const [aiSummary, setAiSummary] = useState(null);
@@ -196,6 +205,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
       return { ...pl, shamePoints: (player && shamePoints?.[player.id]) || 0 };
     });
 
+    // Loading flag fires synchronously, then resolves via .then/.finally.
     setAiLoading(true);
     fetchAISummary(payload)
       .then((s) => {
@@ -215,6 +225,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         }
       })
       .finally(() => setAiLoading(false));
+    // AI fetch fires once at game-over. The payload is built from
+    // game data captured at that moment — re-running on those deps
+    // would re-fetch the summary every mutation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGameOver]);
 
   const summary = aiSummary || fallbackSummary;

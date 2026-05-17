@@ -235,7 +235,6 @@ export default function App() {
           totalScores={totalScores}
           trumpSuit={round.trumpSuit}
           isLastRound={gameState.isLastRound}
-          lastRoundTrumpChoice={gameState.lastRoundTrumpChoice}
           onStartRound={startRound}
           onSelectTrump={() => setShowTrumpPicker(true)}
           allPlayers={gameState.players}

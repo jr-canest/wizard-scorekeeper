@@ -4,9 +4,10 @@ import {
   getRecentGames,
   mergePlayerInto,
   deleteHistoryGame,
-  roundBreakdownFromLog,
+  roundBreakdownFromGame,
 } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
@@ -77,23 +78,37 @@ export default function HistoryScreen({ onClose }) {
     return getAllPlayers().then(setPlayers);
   }
 
-  useEffect(() => {
-    // Mount-time data fetch — loading/error are state-backed because
-    // the .then/.catch resolve asynchronously and the UI needs to
-    // re-render to reflect each transition.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+  function loadHistory() {
     setLoading(true);
     setError(null);
-    Promise.all([getAllPlayers(), getRecentGames(30)])
+    // Race the Firebase fetch against a 15s timeout — without this,
+    // a hung WebChannel could leave the spinner up forever.
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 15000),
+    );
+    Promise.race([
+      Promise.all([getAllPlayers(), getRecentGames(30)]),
+      timeout,
+    ])
       .then(([p, g]) => {
         setPlayers(p);
         setGames(g);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Failed to load history:', err);
-        setError('Could not load history');
+        setError(
+          err?.message === 'timeout'
+            ? 'Connection seems slow. Tap Retry.'
+            : 'Could not load history',
+        );
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    // Mount-time data fetch — also exposed as the Retry button handler.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadHistory();
   }, []);
 
   function handleSort(key) {
@@ -188,6 +203,13 @@ export default function HistoryScreen({ onClose }) {
         {error && (
           <div className="text-center py-12">
             <p className="text-red-400 text-sm">{error}</p>
+            <button
+              type="button"
+              onClick={loadHistory}
+              className="mt-3 px-4 py-2 rounded-lg text-sm font-medium btn-gold"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -415,6 +437,7 @@ function PlayerDetailOverlay({
   onConfirmMerge,
   onBackToView,
 }) {
+  useBodyScrollLock();
   const isMerging = state.mode === 'merging';
   return (
     <div
@@ -642,10 +665,11 @@ function GameDetailOverlay({
   onCancelDelete,
   onConfirmDelete,
 }) {
+  useBodyScrollLock();
   const isDeleting = state.mode === 'deleting';
   const game = state.game;
   const sortedResults = [...(game.results || [])].sort((a, b) => a.rank - b.rank);
-  const breakdown = roundBreakdownFromLog(game.log);
+  const breakdown = roundBreakdownFromGame(game);
   const hasGraph = breakdown.length > 0;
 
   // BarChartRace expects {id, name, addedInRound, startingPoints}.

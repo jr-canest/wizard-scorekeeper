@@ -165,10 +165,22 @@ export async function getAllPlayers() {
 
 /**
  * Save a completed game and update player stats.
- * playerResults: [{ name, score, rank, shamePoints }]
+ *
+ *   playerResults: [{ name, score, rank, shamePoints }]
+ *   roundCount:    number
+ *   localRounds:   the game's full rounds[] (optional). When provided
+ *                  it's transformed to a name-keyed shape and saved
+ *                  to gameDoc.rounds, which the History → game detail
+ *                  modal uses to render the score graph and the
+ *                  round-by-round breakdown. Games saved without it
+ *                  show "no round-by-round data" in the modal.
+ *   localPlayers:  the game's local players[] (needed to map the
+ *                  per-round playerId keys to player NAMES so the
+ *                  saved shape doesn't carry ephemeral local IDs).
+ *
  * Returns { gameId, resolvedPlayers } — gameId is null on localhost.
  */
-export async function saveGameResult(playerResults, roundCount) {
+export async function saveGameResult(playerResults, roundCount, localRounds, localPlayers) {
   // Only save on the live site, not during local development
   if (!isProduction()) {
     console.log('[Firebase] Skipping save — local development');
@@ -189,6 +201,33 @@ export async function saveGameResult(playerResults, roundCount) {
   const winnerScore = Math.max(...resolvedPlayers.map(p => p.score));
   const winners = resolvedPlayers.filter(p => p.score === winnerScore);
 
+  // Transform local-state rounds (playerId-keyed) into name-keyed so
+  // the saved doc doesn't carry ephemeral local IDs. Only saved when
+  // both rounds + players are passed in (newer call sites do; older
+  // callers stay forward-compatible).
+  const idToName = {};
+  if (Array.isArray(localPlayers)) {
+    for (const lp of localPlayers) idToName[lp.id] = lp.name;
+  }
+  const remapByName = (obj) => {
+    if (!obj) return {};
+    const out = {};
+    for (const [pid, v] of Object.entries(obj)) {
+      const name = idToName[pid];
+      if (name) out[name] = v;
+    }
+    return out;
+  };
+  const savedRounds = Array.isArray(localRounds)
+    ? localRounds.map((r) => ({
+        round: r.roundNumber,
+        cardsDealt: r.cardsDealt,
+        bids: remapByName(r.bids),
+        tricks: remapByName(r.tricks),
+        scores: remapByName(r.scores),
+      }))
+    : null;
+
   // 2. Save game document
   const gameDoc = {
     date: serverTimestamp(),
@@ -201,6 +240,8 @@ export async function saveGameResult(playerResults, roundCount) {
       rank: p.rank,
       shamePoints: p.shamePoints || 0,
     })),
+    source: 'scorekeeper',
+    ...(savedRounds ? { rounds: savedRounds } : {}),
   };
   const gameRef = await addDoc(collection(db, 'games'), gameDoc);
 
@@ -446,8 +487,8 @@ export async function deleteHistoryGame(gameId) {
 /**
  * Reduce a finished game's log into per-round per-player bid/won/Δ
  * data, sorted by round. Only multiplayer-sourced games have a log —
- * for scorekeeper games this returns []. Used by the game-detail
- * modal in the History view.
+ * scorekeeper games carry `rounds` instead (use roundBreakdownFromGame
+ * for the unified entry point).
  */
 export function roundBreakdownFromLog(log) {
   if (!Array.isArray(log)) return [];
@@ -471,4 +512,27 @@ export function roundBreakdownFromLog(log) {
     }
   }
   return Array.from(byRound.values()).sort((a, b) => a.round - b.round);
+}
+
+/**
+ * Unified per-round breakdown that handles both shapes the game doc
+ * may carry: `log` (multiplayer-sourced) or `rounds` (scorekeeper-
+ * sourced, name-keyed). Returns [] for old games that have neither.
+ */
+export function roundBreakdownFromGame(game) {
+  if (Array.isArray(game?.log) && game.log.length > 0) {
+    return roundBreakdownFromLog(game.log);
+  }
+  if (Array.isArray(game?.rounds) && game.rounds.length > 0) {
+    return game.rounds
+      .slice()
+      .sort((a, b) => (a.round ?? 0) - (b.round ?? 0))
+      .map((r) => ({
+        round: r.round,
+        bids: r.bids || {},
+        tricks: r.tricks || {},
+        deltas: r.scores || {},
+      }));
+  }
+  return [];
 }

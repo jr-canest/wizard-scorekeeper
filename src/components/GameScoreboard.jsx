@@ -132,7 +132,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
             shamePoints: shamePoints?.[player.id] || 0,
           };
         });
-        saveGameResult(playerResults, completedRounds.length)
+        // Pass completedRounds + players so the saved doc carries the
+        // round-by-round data (bids, tricks, scores per name) — the
+        // History → game detail modal renders the chart + table from it.
+        saveGameResult(playerResults, completedRounds.length, completedRounds, players)
           .then((res) => {
             gameIdRef.current = res?.gameId ?? null;
             setSaveStatus('saved');

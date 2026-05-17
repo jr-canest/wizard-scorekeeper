@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameState } from './hooks/useGameState';
+import { useUIScale } from './hooks/useUIScale';
 import { PHASES } from './utils/constants';
 import SetupScreen from './components/SetupScreen';
 import RoundHeader from './components/RoundHeader';
@@ -19,6 +20,7 @@ function WizardLogo({ className = "h-8" }) {
 }
 
 export default function App() {
+  useUIScale();
   const {
     gameState,
     hasSavedGame,

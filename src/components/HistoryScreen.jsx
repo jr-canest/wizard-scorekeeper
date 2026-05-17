@@ -423,7 +423,8 @@ function PlayerDetailOverlay({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md card-gold p-4 space-y-3 max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md card-gold p-4 space-y-3 overflow-y-auto"
+        style={{ maxHeight: 'calc(85vh / var(--ui-zoom, 1))' }}
       >
         {(state.mode === 'view' || state.mode === 'pickMergeTarget') && (
           <DetailHeader
@@ -561,7 +562,10 @@ function PlayerPickBody({ self, visiblePlayers, onPick }) {
         placeholder="Search players…"
         className="w-full rounded-md bg-navy-800 border border-gold-700/60 px-2.5 py-1.5 text-sm text-navy-50 placeholder:text-navy-300 focus:outline-none focus:border-gold-400"
       />
-      <div className="max-h-[40vh] overflow-y-auto rounded-md border border-gold-700/30 divide-y divide-gold-700/20">
+      <div
+        className="overflow-y-auto rounded-md border border-gold-700/30 divide-y divide-gold-700/20"
+        style={{ maxHeight: 'calc(40vh / var(--ui-zoom, 1))' }}
+      >
         {choices.length === 0 ? (
           <p className="text-navy-300 text-xs italic p-3 text-center">No matching players.</p>
         ) : (
@@ -685,7 +689,8 @@ function GameDetailOverlay({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md card-gold p-4 space-y-3 max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-md card-gold p-4 space-y-3 overflow-y-auto"
+        style={{ maxHeight: 'calc(85vh / var(--ui-zoom, 1))' }}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">

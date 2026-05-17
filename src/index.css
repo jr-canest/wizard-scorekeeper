@@ -37,6 +37,11 @@ body {
   background-attachment: fixed;
   color: #e5e7eb;
   min-height: 100svh;
+  /* The layout is designed for a phone (~380px). On iPad / desktop
+     useUIScale sets --ui-zoom to 1.0–2.4× so the same layout fills the
+     available space instead of sitting inside a narrow centered column.
+     Matches the multiplayer app's behavior so the two feel similar. */
+  zoom: var(--ui-zoom, 1);
 }
 
 #root {

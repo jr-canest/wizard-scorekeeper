@@ -3,6 +3,7 @@ import {
   getAllPlayers,
   getRecentGames,
   mergePlayerInto,
+  setPrimaryName,
   deleteHistoryGame,
   roundBreakdownFromGame,
 } from '../utils/firebase';
@@ -138,6 +139,21 @@ export default function HistoryScreen({ onClose }) {
     } catch (err) {
       setMergeError(err?.message || 'Merge failed.');
       setPlayerDetail({ mode: 'confirmMerge', alias, canonical });
+    }
+  }
+
+  async function applySetPrimary(player, newName) {
+    setMergeError(null);
+    try {
+      await setPrimaryName(player.id, newName);
+      const fresh = await getAllPlayers();
+      setPlayers(fresh);
+      // Re-open the detail on the freshly-renamed doc so the picker reflects
+      // the swap immediately.
+      const updated = fresh.find((p) => p.id === player.id);
+      if (updated) setPlayerDetail({ mode: 'view', player: updated });
+    } catch (err) {
+      setMergeError(err?.message || 'Could not change display name.');
     }
   }
 
@@ -375,6 +391,11 @@ export default function HistoryScreen({ onClose }) {
               setPlayerDetail({ mode: 'pickMergeTarget', player: playerDetail.player });
             }
           }}
+          onSetPrimary={(newName) => {
+            if (playerDetail.mode === 'view') {
+              applySetPrimary(playerDetail.player, newName);
+            }
+          }}
           onPickTarget={(target) => {
             if (playerDetail.mode === 'pickMergeTarget') {
               setPlayerDetail({ mode: 'confirmMerge', alias: playerDetail.player, canonical: target });
@@ -433,6 +454,7 @@ function PlayerDetailOverlay({
   mergeError,
   onClose,
   onStartMerge,
+  onSetPrimary,
   onPickTarget,
   onConfirmMerge,
   onBackToView,
@@ -467,7 +489,14 @@ function PlayerDetailOverlay({
         )}
 
         {state.mode === 'view' && (
-          <PlayerViewBody player={state.player} onStartMerge={onStartMerge} />
+          <PlayerViewBody
+            player={state.player}
+            onStartMerge={onStartMerge}
+            onSetPrimary={onSetPrimary}
+          />
+        )}
+        {mergeError && state.mode === 'view' && (
+          <p className="text-red-400 text-xs text-center">{mergeError}</p>
         )}
         {state.mode === 'pickMergeTarget' && (
           <PlayerPickBody
@@ -527,7 +556,7 @@ function DetailHeader({ title, subtitle, onBack, onClose }) {
   );
 }
 
-function PlayerViewBody({ player, onStartMerge }) {
+function PlayerViewBody({ player, onStartMerge, onSetPrimary }) {
   const gp = player.gamesPlayed || 0;
   const aliases = player.aliases || [];
   return (
@@ -541,17 +570,37 @@ function PlayerViewBody({ player, onStartMerge }) {
         <Stat label="Avg" value={gp > 0 ? Math.round((player.totalScore || 0) / gp) : '—'} />
       </div>
       <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
-        <p className="text-xs uppercase tracking-wider text-navy-200 mb-1">Also known as</p>
+        <p className="text-xs uppercase tracking-wider text-navy-200 mb-1">Display name</p>
         {aliases.length === 0 ? (
           <p className="text-navy-300 text-xs italic">
             No aliases. Tap "Merge into…" if this player is the same as another listed name.
           </p>
         ) : (
-          <ul className="space-y-0.5">
-            {aliases.map((a) => (
-              <li key={a} className="text-sm text-navy-50">• {a}</li>
-            ))}
-          </ul>
+          <>
+            <p className="text-[11px] text-navy-300 mb-1.5">
+              Tap a name to show it on the leaderboard. The others stay as aliases.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {[player.name, ...aliases].map((n) => {
+                const isCurrent = n === player.name;
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={isCurrent}
+                    onClick={() => onSetPrimary?.(n)}
+                    className={`text-sm px-2.5 py-1 rounded-full border tabular-nums transition ${
+                      isCurrent
+                        ? 'bg-gold-300/15 border-gold-400 text-gold-100 font-semibold'
+                        : 'bg-navy-800 border-gold-700/50 text-navy-100 active:scale-[0.97]'
+                    }`}
+                  >
+                    {n}{isCurrent ? ' ✓' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
       <button
@@ -647,10 +696,13 @@ function MergeConfirmBody({ alias, canonical, mergeError, isMerging, onConfirm, 
 }
 
 function Stat({ label, value }) {
+  // Square-ish tiles: a min-height + centered stack keeps them from
+  // rendering as wide, stretched-looking bars (most noticeable on the
+  // larger iPad/desktop zoom, where the same proportions get scaled up).
   return (
-    <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-2 py-1.5">
+    <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-2 py-2.5 min-h-[3.25rem] flex flex-col items-center justify-center gap-1">
       <p className="text-[10px] uppercase tracking-wider text-navy-300 leading-none">{label}</p>
-      <p className="text-sm font-bold text-gold-100 tabular-nums leading-tight mt-1">{value}</p>
+      <p className="text-base font-bold text-gold-100 tabular-nums leading-none">{value}</p>
     </div>
   );
 }

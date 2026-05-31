@@ -384,6 +384,42 @@ export async function mergePlayerInto(canonicalId, aliasId) {
   });
 }
 
+/**
+ * Change which name a (canonical) player displays as. Swaps the chosen
+ * name in as `name`/`nameLower` and folds the previous display name into
+ * `aliases`. The doc id is untouched, so all stats and every
+ * `mergedInto` pointer that resolves through this doc are preserved —
+ * this is purely a relabel of the same player. `newName` is normally one
+ * of the player's existing aliases.
+ */
+export async function setPrimaryName(playerId, newName) {
+  const trimmed = (newName || '').trim();
+  if (!trimmed) throw new Error('setPrimaryName: empty name');
+  const ref = doc(db, 'players', playerId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('setPrimaryName: not found');
+    const p = snap.data();
+    if (p.mergedInto) throw new Error('setPrimaryName: player is merged');
+    const oldName = p.name || '';
+    if (oldName === trimmed) return; // already the display name — no-op
+    const lower = trimmed.toLowerCase();
+    // Drop the chosen name from aliases (case-insensitive) and fold the
+    // previous display name in. Dedupe, keeping display case.
+    const rest = (Array.isArray(p.aliases) ? p.aliases : []).filter(
+      (a) => typeof a === 'string' && a.toLowerCase() !== lower,
+    );
+    const nextAliases = Array.from(
+      new Set([...rest, oldName].filter(Boolean)),
+    );
+    tx.update(ref, {
+      name: trimmed,
+      nameLower: lower,
+      aliases: nextAliases,
+    });
+  });
+}
+
 // ─── Game deletion ─────────────────────────────────────
 
 async function resolveCanonicalPlayerId(playerId) {

@@ -26,9 +26,12 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
     }
   }, [shameTarget, onShame]);
 
+  const firstName = biddingOrder[0]?.name;
+  const dealerName = biddingOrder[biddingOrder.length - 1]?.name;
+
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-white font-semibold">Bidding</h3>
         <span className={`text-sm font-medium ${
           totalBids > cardsDealt ? 'text-red-400' : totalBids === cardsDealt ? 'text-yellow-400' : 'text-blue-400'
@@ -36,6 +39,11 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
           Total: {totalBids} / {cardsDealt}
         </span>
       </div>
+      {firstName && dealerName && (
+        <p className="text-navy-200/50 text-xs mb-3">
+          Order: {firstName} first → {dealerName} (dealer) last
+        </p>
+      )}
 
       <div className="space-y-3">
         {biddingOrder.map((player, idx) => {

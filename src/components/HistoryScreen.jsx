@@ -6,6 +6,8 @@ import {
   setPrimaryName,
   deleteHistoryGame,
   roundBreakdownFromGame,
+  readHistoryCache,
+  writeHistoryCache,
 } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
@@ -61,10 +63,15 @@ function formatDateLong(timestamp) {
 }
 
 export default function HistoryScreen({ onClose }) {
+  // Paint instantly from the last cached result, then refresh in the
+  // background. Only the very first ever open (empty cache) shows the
+  // full-screen spinner.
+  const [cache] = useState(() => readHistoryCache());
   const [tab, setTab] = useState('players'); // 'players' | 'games'
-  const [players, setPlayers] = useState([]);
-  const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [players, setPlayers] = useState(cache?.players || []);
+  const [games, setGames] = useState(cache?.games || []);
+  const [loading, setLoading] = useState(!cache);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [sortKey, setSortKey] = useState('winRate');
   const [sortAsc, setSortAsc] = useState(false);
@@ -80,7 +87,14 @@ export default function HistoryScreen({ onClose }) {
   }
 
   function loadHistory() {
-    setLoading(true);
+    // With cached data on screen we refresh quietly; only a cold start
+    // (no cache) gets the blocking spinner.
+    const hasCache = players.length > 0 || games.length > 0;
+    if (hasCache) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     // Race the Firebase fetch against a 15s timeout — without this,
     // a hung WebChannel could leave the spinner up forever.
@@ -97,20 +111,37 @@ export default function HistoryScreen({ onClose }) {
       })
       .catch((err) => {
         console.error('Failed to load history:', err);
-        setError(
-          err?.message === 'timeout'
-            ? 'Connection seems slow. Tap Retry.'
-            : 'Could not load history',
-        );
+        // If we already have something on screen (from cache), keep it —
+        // a failed background refresh shouldn't blow away usable data.
+        if (!hasCache) {
+          setError(
+            err?.message === 'timeout'
+              ? 'Connection seems slow. Tap Retry.'
+              : 'Could not load history',
+          );
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }
 
   useEffect(() => {
     // Mount-time data fetch — also exposed as the Retry button handler.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Intentionally mount-only; loadHistory reads current state each call.
     loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the cache in sync with whatever's on screen — covers the
+  // background refresh as well as in-place mutations (delete / merge /
+  // rename) so a stale game can't briefly resurface on the next open.
+  useEffect(() => {
+    if (loading) return;
+    if (players.length === 0 && games.length === 0) return;
+    writeHistoryCache(players, games);
+  }, [players, games, loading]);
 
   function handleSort(key) {
     if (sortKey === key) {
@@ -177,7 +208,12 @@ export default function HistoryScreen({ onClose }) {
       <div className="p-4 max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">History</h2>
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-xl font-bold text-white">History</h2>
+            {refreshing && (
+              <span className="text-navy-200/60 text-xs">refreshing…</span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-navy-200 text-2xl active:text-white px-2"

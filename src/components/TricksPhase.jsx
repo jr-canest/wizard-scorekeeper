@@ -32,14 +32,24 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
     }
   }, [shameTarget, onShame]);
 
+  const firstName = biddingOrder[0]?.name;
+  const dealerName = biddingOrder[biddingOrder.length - 1]?.name;
+
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-white font-semibold">Tricks Won</h3>
-        <span className="text-navy-200 text-sm">
-          Remaining: {remaining}
+        <span className={`text-sm font-medium ${
+          tricksAssigned > cardsDealt ? 'text-red-400' : tricksAssigned === cardsDealt ? 'text-yellow-400' : 'text-blue-400'
+        }`}>
+          Total: {tricksAssigned} / {cardsDealt}
         </span>
       </div>
+      {firstName && dealerName && (
+        <p className="text-navy-200/50 text-xs mb-3">
+          Order: {firstName} first → {dealerName} (dealer) last
+        </p>
+      )}
 
       <div className="space-y-3">
         {biddingOrder.map((player) => {
@@ -107,6 +117,22 @@ export default function TricksPhase({ players, dealerId, cardsDealt, bids, trick
             </div>
           );
         })}
+      </div>
+
+      {/* Over/under summary vs cards dealt — mirrors the bidding phase */}
+      <div className={`text-center py-2 rounded-lg mt-4 mb-3 text-sm font-medium ${
+        tricksAssigned === cardsDealt
+          ? 'bg-gold-300/15 text-gold-200 border border-gold-300/20'
+          : tricksAssigned > cardsDealt
+            ? 'bg-red-900/40 text-red-300 border border-red-700/30'
+            : 'bg-blue-900/40 text-blue-300 border border-blue-700/30'
+      }`}>
+        {tricksAssigned === cardsDealt
+          ? 'All tricks accounted for'
+          : tricksAssigned > cardsDealt
+            ? `Over by ${tricksAssigned - cardsDealt}`
+            : `${cardsDealt - tricksAssigned} trick${cardsDealt - tricksAssigned !== 1 ? 's' : ''} left`
+        }
       </div>
 
       {/* Always show Back, only enable Score Round when valid */}

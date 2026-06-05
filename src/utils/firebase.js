@@ -55,6 +55,55 @@ export function isProduction() {
   return window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 }
 
+// ─── History cache (stale-while-revalidate) ────────────
+// The History screen fetches all players + recent games from Firestore
+// every time it opens, and a cold WebChannel handshake can take a few
+// seconds. We cache the last successful result in localStorage so the
+// screen can paint instantly from cache while a fresh fetch runs in the
+// background. The fetch then overwrites the cache.
+
+const HISTORY_CACHE_KEY = 'wizard-history-cache-v1';
+
+// Firestore Timestamps don't survive JSON.stringify as usable objects,
+// so collapse them to a plain { seconds } shape — which formatDate()
+// already understands (it falls back to `timestamp.seconds * 1000`).
+function normalizeTimestamp(ts) {
+  if (!ts) return null;
+  if (typeof ts.toDate === 'function') {
+    return { seconds: Math.floor(ts.toDate().getTime() / 1000) };
+  }
+  if (typeof ts.seconds === 'number') return { seconds: ts.seconds };
+  return ts;
+}
+
+/** Read the cached { players, games, cachedAt } or null. */
+export function readHistoryCache() {
+  try {
+    const raw = localStorage.getItem(HISTORY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.players) || !Array.isArray(parsed.games)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist the latest players + games for instant re-opens. */
+export function writeHistoryCache(players, games) {
+  try {
+    const safeGames = games.map((g) => ({ ...g, date: normalizeTimestamp(g.date) }));
+    localStorage.setItem(
+      HISTORY_CACHE_KEY,
+      JSON.stringify({ players, games: safeGames, cachedAt: Date.now() }),
+    );
+  } catch {
+    // storage full or unavailable — cache is best-effort
+  }
+}
+
 // ─── Players ───────────────────────────────────────────
 
 /**

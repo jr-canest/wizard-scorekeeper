@@ -249,13 +249,21 @@ export default function App() {
         />
       )}
 
-      {/* Bidding, Tricks, Scored phases get a compact round header */}
+      {/* Bidding, Tricks, Scored phases get a compact round header.
+          During bidding/tricks the trump row is tappable so trump can be
+          set or changed once a Wizard/Jester is flipped mid-round. */}
       {gameState.currentPhase !== PHASES.PREROUND && (
         <RoundHeader
           roundNumber={round.roundNumber}
           cardsDealt={round.cardsDealt}
           dealerName={dealer.name}
           trumpSuit={round.trumpSuit}
+          onSelectTrump={
+            gameState.currentPhase === PHASES.BIDDING ||
+            gameState.currentPhase === PHASES.TRICKS
+              ? () => setShowTrumpPicker(true)
+              : undefined
+          }
         />
       )}
 

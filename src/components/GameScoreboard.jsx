@@ -3,6 +3,7 @@ import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
 import { saveGameResult, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
 import { isDemoMode } from '../utils/demoScenarios';
+import { isTestMode } from '../utils/testMode';
 import BarChartRace from './BarChartRace';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
@@ -118,8 +119,8 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
       const wipeTimer = setTimeout(() => setShowWipe(false), 1100);
       const sparkleEnd = setTimeout(() => setShowSparkles(false), 3000);
 
-      // Save game to Firebase (once). Demo mode skips this entirely.
-      if (!hasSaved.current && !isDemoMode()) {
+      // Save game to Firebase (once). Demo and test modes skip this entirely.
+      if (!hasSaved.current && !isDemoMode() && !isTestMode()) {
         hasSaved.current = true;
         setSaveStatus('saving');
         const playerResults = sortedPlayers.map((player) => {
@@ -169,8 +170,13 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     return total;
   }
 
+  // True minus sign (U+2212) for negatives, per the 1b kit
+  function formatNum(n) {
+    return n < 0 ? `−${Math.abs(n)}` : `${n}`;
+  }
+
   function formatDelta(score) {
-    return score > 0 ? `+${score}` : `${score}`;
+    return score > 0 ? `+${score}` : formatNum(score);
   }
 
   function getRoundWinnerIds(r) {
@@ -199,6 +205,9 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     if (sortedPlayers.length < 2) return;
     // Skip AI on localhost except when running a demo preview.
     if (!isProduction() && !isDemoMode()) return;
+    // Test games use the deterministic fallback summary — no Cloud
+    // Function call, nothing written anywhere.
+    if (isTestMode()) return;
     aiFetchedRef.current = true;
 
     const payload = buildAISummaryPayload(sortedPlayers, totalScores, completedRounds, players, settings || {});
@@ -238,7 +247,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
   return (
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}
-      style={{ background: 'linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%)' }}>
+      style={{ background: 'linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%)' }}>
 
       {showWipe && <WhiteWipe />}
       {showSparkles && <Sparkles />}
@@ -249,8 +258,8 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-white">
-              {isGameOver ? 'Game Over!' : 'Scoreboard'}
+            <h2 className="font-display font-semibold text-[28px] leading-none text-cream-bright">
+              {isGameOver ? 'Game over' : 'Scoreboard'}
             </h2>
             {isGameOver && saveStatus && (
               <p className={`text-xs mt-0.5 ${
@@ -266,10 +275,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           </div>
           <div className="flex items-center gap-2">
             {onShowHistory && (
-              <button
-                onClick={onShowHistory}
-                className="text-gold-200 text-sm font-medium px-3 py-1.5 rounded-lg border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
-              >
+              <button onClick={onShowHistory} className="btn-header">
                 History
               </button>
             )}
@@ -286,7 +292,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
         {/* Game summary */}
         {isGameOver && summary && (
-          <div className={`bg-navy-700/60 border border-gold-700/30 rounded-xl px-4 py-3 mb-4 text-center relative ${aiLoading ? 'summary-shimmer' : ''}`}>
+          <div className={`card-gold px-4 py-3.5 mb-4 text-center relative ${aiLoading ? 'summary-shimmer' : ''}`}>
             <style>{`
               @keyframes summary-fade-in {
                 from { opacity: 0; transform: translateY(4px); }
@@ -305,7 +311,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
             `}</style>
             <p
               key={summary}
-              className="summary-text text-gold-100 text-sm leading-relaxed"
+              className="summary-text font-display text-cream text-[17px] leading-[1.6]"
               dangerouslySetInnerHTML={{ __html: summary }}
             />
           </div>
@@ -332,9 +338,9 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
         {/* Standings */}
         <div className="card-gold overflow-hidden mb-4">
-          <div className="px-3 py-2 border-b border-gold-700/40">
-            <span className="text-gold-200/70 text-sm font-medium">
-              {isGameOver ? 'Final Standings' : 'Standings'}
+          <div className="px-3 h-8 flex items-center border-b border-gold-300/20">
+            <span className="section-label">
+              {isGameOver ? 'Final standings' : 'Standings'}
             </span>
           </div>
           {sortedPlayers.map((player) => {
@@ -343,28 +349,29 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
             const rank = sortedPlayers.findIndex(p => (totalScores[p.id] || 0) === total);
             const isFirst = rank === 0 && total > 0;
             const medal = rank < 3 ? medalEmojis[rank] : null;
+            const shame = shamePoints?.[player.id] || 0;
             return (
               <div
                 key={player.id}
-                className={`flex items-center justify-between px-3 py-2.5 border-b border-gold-700/20 last:border-0 ${
-                  isFirst ? 'bg-gold-300/8' : ''
+                className={`flex items-center justify-between px-3 py-2.5 border-b border-gold-300/10 last:border-0 ${
+                  isFirst ? 'bg-gold-300/[.07]' : ''
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold w-8 ${isFirst ? 'text-gold-200' : 'text-navy-200'}`}>
+                  <span className={`text-sm font-bold w-8 ${isFirst ? 'text-gold-text' : 'text-navy-200'}`}>
                     {medal || positions[rank]}
                   </span>
-                  <span className="text-white font-medium">{player.name}</span>
-                  {(shamePoints?.[player.id] || 0) > 0 && (
-                    <span className="text-red-400 text-xs font-bold" title={`${shamePoints[player.id]} shame point${shamePoints[player.id] !== 1 ? 's' : ''}`}>
-                      💀{shamePoints[player.id] > 1 ? `×${shamePoints[player.id]}` : ''}
+                  <span className="font-display font-semibold text-[17px] text-cream-bright">{player.name}</span>
+                  {shame > 0 && (
+                    <span className="shame-chip" title={`${shame} shame point${shame !== 1 ? 's' : ''}`}>
+                      shame{shame > 1 ? ` ×${shame}` : ''}
                     </span>
                   )}
                 </div>
-                <span className={`font-bold text-lg ${
-                  total > 0 ? 'text-green-400' : total < 0 ? 'text-red-400' : 'text-navy-200'
+                <span className={`font-display font-semibold text-[26px] leading-none tabular-nums ${
+                  total > 0 ? 'text-[#6ee7b7]' : total < 0 ? 'text-[#fda4af]' : 'text-cream'
                 }`}>
-                  {total}
+                  {formatNum(total)}
                 </span>
               </div>
             );
@@ -376,10 +383,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           <div className="card-gold overflow-x-auto mb-4">
             <table className="w-full text-xs min-w-max">
               <thead>
-                <tr className="border-b border-gold-700/40">
-                  <th className="text-left text-navy-200 py-2 px-2 font-medium sticky left-0 bg-navy-800/80 z-10">Rd</th>
+                <tr className="border-b border-gold-300/20">
+                  <th className="text-left text-navy-300 py-2 px-2 font-semibold sticky left-0 bg-[#131b32] z-10 text-[10px] uppercase tracking-[0.14em]">Rd</th>
                   {sortedPlayers.map(p => (
-                    <th key={p.id} className="text-center text-gold-200/70 py-2 px-2 font-medium min-w-[70px]">
+                    <th key={p.id} className="text-center py-2 px-2 font-display font-semibold text-[13px] text-cream min-w-[70px]">
                       {p.name}
                     </th>
                   ))}
@@ -389,21 +396,21 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
                 {completedRounds.map((round, ri) => {
                   const winnerIds = getRoundWinnerIds(round);
                   return (
-                  <tr key={round.roundNumber} className="border-b border-gold-700/15">
-                    <td className="py-2 px-2 text-navy-200 sticky left-0 bg-navy-800/80 z-10">{round.roundNumber}</td>
+                  <tr key={round.roundNumber} className="border-b border-gold-300/10">
+                    <td className="py-2 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-display font-medium text-[15px]">{round.roundNumber}</td>
                     {sortedPlayers.map(player => {
                       const score = round.scores[player.id];
                       const wasPlaying = player.addedInRound <= round.roundNumber;
                       if (!wasPlaying || score === undefined) {
-                        return <td key={player.id} className="py-2 px-2 text-center text-navy-400">—</td>;
+                        return <td key={player.id} className="py-2 px-2 text-center text-steel">—</td>;
                       }
                       const runningTotal = getRunningTotal(player.id, ri);
                       const isWinner = winnerIds.includes(player.id);
                       return (
-                        <td key={player.id} className={`py-2 px-2 text-center ${isWinner ? 'bg-gold-300/10' : ''}`}>
-                          <span className={`font-medium ${isWinner ? 'text-gold-100' : 'text-gray-200'}`}>{runningTotal}</span>
-                          <span className={`ml-0.5 text-[10px] ${
-                            score > 0 ? 'text-green-400' : 'text-red-400'
+                        <td key={player.id} className={`py-2 px-2 text-center ${isWinner ? 'bg-gold-300/[.07]' : ''}`}>
+                          <span className={`font-display font-semibold text-[15px] tabular-nums ${isWinner ? 'text-gold-text' : 'text-cream'}`}>{formatNum(runningTotal)}</span>
+                          <span className={`ml-0.5 text-[10px] font-semibold ${
+                            score > 0 ? 'text-[#6ee7b7]' : 'text-[#fda4af]'
                           }`}>
                             ({formatDelta(score)})
                           </span>
@@ -420,18 +427,12 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
         {/* Game over actions */}
         {isGameOver && (
-          <div className="space-y-3">
-            <button
-              onClick={onKeepPlaying}
-              className="btn-gold w-full py-3 rounded-xl"
-            >
-              Keep Playing
+          <div className="space-y-2.5">
+            <button onClick={onKeepPlaying} className="btn-gold w-full h-12 text-base">
+              Keep playing
             </button>
-            <button
-              onClick={onNewGame}
-              className="w-full py-3 rounded-xl bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
-            >
-              New Game
+            <button onClick={onNewGame} className="btn-secondary w-full h-12 text-[15px]">
+              New game
             </button>
           </div>
         )}

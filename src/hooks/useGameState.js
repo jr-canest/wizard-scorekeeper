@@ -2,10 +2,17 @@ import { useState, useCallback, useEffect } from 'react';
 import { STORAGE_KEY, PHASES } from '../utils/constants';
 import { getMaxRounds, getCardsForRound, getDealerIndex } from '../utils/roundCalculations';
 import { calculateRoundScores, calculateTotalScores } from '../utils/scoring';
+import { isTestMode } from '../utils/testMode';
+
+// Test mode gets its own slot so playing a throwaway game never
+// clobbers a real game in progress on the same device.
+function storageKey() {
+  return isTestMode() ? `${STORAGE_KEY}-test` : STORAGE_KEY;
+}
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey());
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -14,7 +21,7 @@ function loadState() {
 
 function saveState(state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(storageKey(), JSON.stringify(state));
   } catch {
     // storage full or unavailable
   }
@@ -43,7 +50,7 @@ export function useGameState() {
   }, []);
 
   const dismissSavedGame = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey());
     setHasSavedGame(false);
   }, []);
 
@@ -297,7 +304,7 @@ export function useGameState() {
   }, []);
 
   const newGame = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey());
     setGameState(null);
     setHasSavedGame(false);
   }, []);

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* ─── Design kit "1b Evolve" (shared with wizard-multiplayer) ───
+   Two families: display serif (Cormorant Garamond) for round titles,
+   player names and all numerals; UI sans for labels/buttons/status. */
+
 @theme {
   --color-gold-50: #fff9e6;
   --color-gold-100: #f5e6b8;
@@ -22,6 +26,14 @@
   --color-navy-700: #111e3e;
   --color-navy-800: #0c152e;
   --color-navy-900: #080e1f;
+
+  /* 1b kit tones */
+  --color-cream: #ece0c4;        /* numerals, names on rows */
+  --color-cream-bright: #f7f0dd; /* headings, player names */
+  --color-gold-text: #e2c579;    /* gold text / entered numerals */
+  --color-steel: #2e3a55;        /* denominators, separators, disabled */
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
 }
 
 html, body {
@@ -33,7 +45,7 @@ html, body {
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%);
+  background: linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%);
   background-attachment: fixed;
   color: #e5e7eb;
   min-height: 100svh;
@@ -48,33 +60,214 @@ body {
   min-height: 100svh;
 }
 
-/* Gold gradient button */
+/* ─── Buttons ─── */
+
+/* Gold gradient primary */
 .btn-gold {
-  background: linear-gradient(180deg, #e6cc80 0%, #c49a38 40%, #a8842e 100%);
-  color: #3a2a10;
+  background: linear-gradient(180deg, #f0dda0 0%, #c9a141 45%, #9c7a26 100%);
+  color: #2a2010;
   font-weight: 700;
-  border: 1px solid #d4a843;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.15);
-}
-.btn-gold:active {
-  background: linear-gradient(180deg, #d4b86e 0%, #b08830 40%, #8c6e24 100%);
-}
-.btn-gold:disabled {
-  background: #1e2a45;
-  color: #4a5568;
-  border-color: #2a3a55;
+  border: 1px solid #e2c579;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
   text-shadow: none;
 }
+.btn-gold:active {
+  background: linear-gradient(180deg, #ddc98b 0%, #b28c34 45%, #86671f 100%);
+}
+.btn-gold:disabled {
+  background: #0d1426;
+  color: #2e3a55;
+  border-color: rgba(46, 58, 85, 0.6);
+  box-shadow: none;
+}
 
-/* Gold outline style for cards */
+/* Secondary — quiet bordered navy */
+.btn-secondary {
+  background: rgba(20, 26, 44, 0.8);
+  color: #8a9bc0;
+  font-weight: 600;
+  border: 1px solid rgba(212, 168, 67, 0.25);
+  border-radius: 8px;
+}
+.btn-secondary:active {
+  background: rgba(30, 38, 62, 0.9);
+}
+
+/* Compact header button (Scores) */
+.btn-header {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: rgba(20, 26, 44, 0.8);
+  border: 1px solid rgba(212, 168, 67, 0.4);
+  color: #ece0c4;
+  font-weight: 600;
+  font-size: 12px;
+}
+.btn-header:active {
+  background: rgba(30, 38, 62, 0.9);
+}
+
+/* Danger (End game) — transparent, rose outline */
+.btn-danger {
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: rgba(252, 165, 165, 0.75);
+  border-radius: 8px;
+}
+.btn-danger:active {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ─── Panels ─── */
+
 .card-gold {
-  background: rgba(14, 22, 50, 0.6);
-  border: 1px solid #8a7a40;
-  border-radius: 0.75rem;
+  background: linear-gradient(180deg, rgba(24, 32, 56, 0.7), rgba(12, 18, 36, 0.7));
+  border: 1px solid rgba(212, 168, 67, 0.22);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* The player card currently waiting for input — warm gold treatment
+   that glides from card to card as bids/tricks are entered. */
+.card-gold-active {
+  background: linear-gradient(180deg, rgba(38, 32, 20, 0.85), rgba(16, 20, 36, 0.8));
+  border-color: #d4a843;
+  box-shadow: 0 0 22px rgba(212, 168, 67, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .card-gold-subtle {
-  background: rgba(14, 22, 50, 0.4);
-  border: 1px solid rgba(138, 122, 64, 0.4);
-  border-radius: 0.75rem;
+  background: rgba(12, 18, 36, 0.55);
+  border: 1px solid rgba(212, 168, 67, 0.14);
+  border-radius: 8px;
+}
+
+/* ─── Number chips (bid / trick buttons) ─── */
+
+.chip {
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1a2340 0%, #111a33 100%);
+  border: 1px solid rgba(212, 168, 67, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #ece0c4;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.chip:active {
+  background: linear-gradient(180deg, #232e52 0%, #182242 100%);
+}
+.chip-selected {
+  background: linear-gradient(180deg, #f0dda0 0%, #c9a141 45%, #9c7a26 100%);
+  border-color: #e2c579;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: #2a2010;
+  font-weight: 700;
+}
+.chip-locked {
+  background: #0d1426;
+  border-color: rgba(46, 58, 85, 0.6);
+  box-shadow: none;
+  color: #2e3a55;
+  text-decoration: line-through;
+}
+/* Unavailable (not rule-locked) — same tone, no strike-through */
+.chip-disabled {
+  background: #0d1426;
+  border-color: rgba(46, 58, 85, 0.6);
+  box-shadow: none;
+  color: #2e3a55;
+}
+
+/* Shame marker next to a player's name (replaces the 💀 emoji) */
+.shame-chip {
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f87171;
+  padding: 3px 5px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+/* ─── Typography helpers ─── */
+
+.eyebrow {
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(212, 168, 67, 0.7);
+}
+
+.section-label {
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(212, 168, 67, 0.6);
+}
+
+/* ─── Ornament rule: <hairline> ◆ <hairline> ─── */
+
+.ornament {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ornament::before,
+.ornament::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+}
+.ornament::before {
+  background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.45));
+}
+.ornament::after {
+  background: linear-gradient(90deg, rgba(212, 168, 67, 0.45), transparent);
+}
+.diamond {
+  width: 5px;
+  height: 5px;
+  background: #d4a843;
+  transform: rotate(45deg);
+  display: inline-block;
+  flex: none;
+}
+
+/* ─── Micro-animations (all ≤200ms, transform/opacity only) ─── */
+
+/* Stage mount: quick fade + rise. Transform ends when the animation
+   ends (no fill), so fixed-position modals inside are unaffected. */
+@keyframes phase-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.phase-enter { animation: phase-in 200ms ease-out; }
+
+/* Chip / small element appearing or changing */
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pop-in { animation: pop-in 150ms ease-out; }
+
+/* Quick press-pop on a newly selected number button */
+@keyframes bid-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.bid-pop { animation: bid-pop 160ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-enter, .pop-in, .bid-pop { animation: none; }
+  .card-gold { transition: none; }
 }

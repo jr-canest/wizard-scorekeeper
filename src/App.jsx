@@ -3,7 +3,6 @@ import { useGameState } from './hooks/useGameState';
 import { useUIScale } from './hooks/useUIScale';
 import { PHASES } from './utils/constants';
 import SetupScreen from './components/SetupScreen';
-import RoundHeader from './components/RoundHeader';
 import PreRoundScreen from './components/PreRoundScreen';
 import TrumpSelection from './components/TrumpSelection';
 import BiddingPhase from './components/BiddingPhase';
@@ -147,19 +146,13 @@ export default function App() {
       <div className="min-h-svh flex items-center justify-center p-4">
         <div className="card-gold p-6 max-w-sm w-full text-center">
           <WizardLogo className="h-10 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Game in Progress</h2>
+          <h2 className="font-display font-semibold text-[26px] leading-none text-cream-bright mb-2.5">Game in progress</h2>
           <p className="text-navy-200 mb-6">Resume your previous game?</p>
-          <div className="flex gap-3">
-            <button
-              onClick={dismissSavedGame}
-              className="flex-1 py-3 rounded-lg bg-navy-600 text-gray-300 font-medium active:bg-navy-500"
-            >
-              New Game
+          <div className="flex gap-2.5">
+            <button onClick={dismissSavedGame} className="btn-secondary flex-1 h-12 text-[15px]">
+              New game
             </button>
-            <button
-              onClick={resumeGame}
-              className="btn-gold flex-1 py-3 rounded-lg"
-            >
+            <button onClick={resumeGame} className="btn-gold flex-1 h-12 text-base">
               Resume
             </button>
           </div>
@@ -207,21 +200,24 @@ export default function App() {
   const activePlayers = gameState.players.filter(p => p.addedInRound <= round.roundNumber);
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      {/* Header bar */}
-      <div className="flex items-center justify-between mb-4">
+    <div className="px-3.5 pb-4 max-w-md mx-auto">
+      {/* Shared header bar: ghost action · ◆ logo ◆ · Scores */}
+      <div className="flex items-center justify-between h-[50px] -mx-3.5 px-3.5 border-b border-gold-300/[.28]"
+        style={{ background: 'linear-gradient(180deg,rgba(212,168,67,.07),transparent)' }}
+      >
         <button
           onClick={() => setShowNewGameConfirm(true)}
-          className="text-navy-200/60 text-sm active:text-gray-300"
+          className="text-navy-200 text-[13px] font-medium active:text-cream"
         >
-          New Game
+          New game
         </button>
-        <WizardLogo className="h-7" />
-        <button
-          onClick={() => setShowScoreboard(true)}
-          className="text-gold-200 text-sm font-medium px-3 py-1.5 rounded-lg border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
-        >
-          Scoreboard
+        <div className="flex items-center gap-2">
+          <span className="diamond" />
+          <WizardLogo className="h-[15px]" />
+          <span className="diamond" />
+        </div>
+        <button onClick={() => setShowScoreboard(true)} className="btn-header">
+          Scores
         </button>
       </div>
 
@@ -249,24 +245,9 @@ export default function App() {
         />
       )}
 
-      {/* Bidding, Tricks, Scored phases get a compact round header.
-          During bidding/tricks the trump row is tappable so trump can be
-          set or changed once a Wizard/Jester is flipped mid-round. */}
-      {gameState.currentPhase !== PHASES.PREROUND && (
-        <RoundHeader
-          roundNumber={round.roundNumber}
-          cardsDealt={round.cardsDealt}
-          dealerName={dealer.name}
-          trumpSuit={round.trumpSuit}
-          onSelectTrump={
-            gameState.currentPhase === PHASES.BIDDING ||
-            gameState.currentPhase === PHASES.TRICKS
-              ? () => setShowTrumpPicker(true)
-              : undefined
-          }
-        />
-      )}
-
+      {/* During bidding/tricks the metadata row's trump segment is
+          tappable so trump can be set or changed once a Wizard/Jester
+          is flipped mid-round. */}
       {gameState.currentPhase === PHASES.BIDDING && (
         <BiddingPhase
           players={activePlayers}
@@ -276,6 +257,12 @@ export default function App() {
           roundNumber={round.roundNumber}
           bids={round.bids}
           shamePoints={gameState.shamePoints}
+          trumpSuit={round.trumpSuit}
+          dealerName={dealer.name}
+          onSelectTrump={() => setShowTrumpPicker(true)}
+          isLastRound={gameState.isLastRound}
+          onDeclareLastRound={declareLastRound}
+          onUndeclareLastRound={undeclareLastRound}
           onBid={setBid}
           onShame={addShamePoint}
           onConfirm={confirmBids}
@@ -288,9 +275,13 @@ export default function App() {
           players={activePlayers}
           dealerId={dealer.id}
           cardsDealt={round.cardsDealt}
+          roundNumber={round.roundNumber}
           bids={round.bids}
           tricks={round.tricks}
           shamePoints={gameState.shamePoints}
+          trumpSuit={round.trumpSuit}
+          dealerName={dealer.name}
+          onSelectTrump={() => setShowTrumpPicker(true)}
           onTrick={setTricks}
           onShame={addShamePoint}
           onConfirm={confirmTricks}
@@ -308,7 +299,7 @@ export default function App() {
           isLastRound={gameState.isLastRound}
           dealerName={dealer.name}
           onNextRound={nextRound}
-          onEndGame={endGame}
+          onEndGame={gameState.isLastRound ? endGame : () => setShowEndGameConfirm(true)}
           onEditRound={() => editRound(gameState.currentRound)}
         />
       )}
@@ -369,8 +360,8 @@ export default function App() {
 
       {showDealerPicker && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-5 max-w-sm w-full">
-            <h3 className="text-lg font-semibold text-white mb-3">Change Dealer</h3>
+          <div className="card-gold bg-[#0d1426] p-5 max-w-sm w-full pop-in">
+            <h3 className="font-display font-semibold text-[22px] leading-none text-cream-bright mb-3.5">Change dealer</h3>
             <div className="space-y-1 max-h-80 overflow-y-auto">
               {activePlayers.map((p) => {
                 const playerIndex = gameState.players.indexOf(p);
@@ -378,8 +369,8 @@ export default function App() {
                   <button
                     key={p.id}
                     onClick={() => { setDealer(playerIndex); setShowDealerPicker(false); }}
-                    className={`w-full text-left py-2.5 px-3 rounded-lg ${
-                      p.id === dealer.id ? 'bg-gold-300/20 text-gold-200' : 'text-white active:bg-navy-600'
+                    className={`w-full text-left py-2.5 px-3 rounded-lg font-display font-semibold text-[17px] ${
+                      p.id === dealer.id ? 'bg-gold-300/15 text-gold-text' : 'text-cream-bright active:bg-navy-600'
                     }`}
                   >
                     {p.name} {p.id === dealer.id ? '♛' : ''}
@@ -389,7 +380,7 @@ export default function App() {
             </div>
             <button
               onClick={() => setShowDealerPicker(false)}
-              className="w-full mt-3 py-2 text-navy-200/60 text-sm"
+              className="btn-secondary w-full mt-3 h-10 text-sm"
             >
               Cancel
             </button>

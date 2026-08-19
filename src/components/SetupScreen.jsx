@@ -3,12 +3,21 @@ import { MIN_PLAYERS, MAX_PLAYERS } from '../utils/constants';
 import { getMaxRounds } from '../utils/roundCalculations';
 import { searchPlayers, isProduction } from '../utils/firebase';
 import { getDemoNames } from '../utils/demoScenarios';
+import { isTestMode } from '../utils/testMode';
+
+// Test mode preloads throwaway players so a test game is one tap away.
+// Nothing is saved in test mode, so these names never reach Firestore.
+const TEST_PLAYERS = ['Merlin', 'Gandalf', 'Morgana', 'Radagast'];
 
 export default function SetupScreen({ onStartGame, onShowHistory }) {
-  const [players, setPlayers] = useState([
-    { id: crypto.randomUUID(), name: '' },
-    { id: crypto.randomUUID(), name: '' },
-  ]);
+  const [players, setPlayers] = useState(() =>
+    isTestMode()
+      ? TEST_PLAYERS.map(name => ({ id: crypto.randomUUID(), name }))
+      : [
+          { id: crypto.randomUUID(), name: '' },
+          { id: crypto.randomUUID(), name: '' },
+        ]
+  );
   const [firstDealerIndex, setFirstDealerIndex] = useState(0);
   const [canadianRules, setCanadianRules] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
@@ -144,25 +153,29 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
 
   return (
     <div
-      className="p-4 max-w-md mx-auto select-none"
+      className="px-3.5 py-4 max-w-md mx-auto select-none"
       onMouseMove={dragIndex !== null ? handleDragMove : undefined}
       onMouseUp={dragIndex !== null ? handleDragEnd : undefined}
       onTouchMove={dragIndex !== null ? handleDragMove : undefined}
       onTouchEnd={dragIndex !== null ? handleDragEnd : undefined}
     >
       {/* Logo header */}
-      <div className="text-center mb-5 pt-2">
-        <img
-          src={`${import.meta.env.BASE_URL}wizard-logo.svg`}
-          alt="Wizard"
-          className="h-12 mx-auto mb-1"
-        />
-        <p className="text-gold-100/60 text-xs tracking-widest uppercase">Score Keeper</p>
+      <div className="text-center mb-6 pt-3">
+        <div className="flex items-center justify-center gap-2.5 mb-2">
+          <span className="diamond" />
+          <img
+            src={`${import.meta.env.BASE_URL}wizard-logo.svg`}
+            alt="Wizard"
+            className="h-11"
+          />
+          <span className="diamond" />
+        </div>
+        <p className="eyebrow">Score Keeper</p>
       </div>
 
       <section className="mb-4">
-        <h2 className="text-lg font-semibold text-gold-100 mb-0.5">Players</h2>
-        <p className="text-navy-200 text-xs mb-2">Hold and drag to reorder. Tap D to set dealer.</p>
+        <h2 className="font-display font-semibold text-[22px] leading-none text-cream-bright mb-1.5">Players</h2>
+        <p className="text-navy-200 text-xs mb-2.5">Hold and drag to reorder. Tap D to set dealer.</p>
         <div className="space-y-1.5" ref={listRef}>
           {players.map((player, i) => (
             <div
@@ -192,20 +205,20 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                     }
                   }, 150)}
                   placeholder={`Player ${i + 1}`}
-                  className="w-full bg-navy-800/60 border border-gold-700/60 rounded-lg px-3 py-2.5 text-white placeholder-navy-200/50 focus:border-gold-300 focus:outline-none select-text"
+                  className="w-full h-11 bg-[rgba(20,26,44,.8)] border border-gold-300/25 rounded-lg px-3 text-cream placeholder-navy-300 focus:border-gold-300 focus:outline-none select-text"
                   maxLength={20}
                   autoComplete="off"
                 />
                 {activeInputIndex === i && suggestions.length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-navy-800 border border-gold-700/50 rounded-lg overflow-hidden shadow-lg">
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#111a33] border border-gold-300/25 rounded-lg overflow-hidden shadow-lg">
                     {suggestions.map(s => (
                       <button
                         key={s.id}
                         onMouseDown={() => selectSuggestion(i, s.name)}
-                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
+                        className="w-full px-3 py-2 text-left text-sm text-cream hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
                       >
-                        <span>{s.name}</span>
-                        <span className="text-navy-200/50 text-xs">{s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''}</span>
+                        <span className="font-display font-semibold text-[15px]">{s.name}</span>
+                        <span className="text-navy-300 text-xs">{s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''}</span>
                       </button>
                     ))}
                   </div>
@@ -215,8 +228,8 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                 onClick={() => setFirstDealerIndex(i)}
                 className={`px-2 py-1 rounded-lg text-sm font-medium shrink-0 flex flex-col items-center min-w-[52px] ${
                   firstDealerIndex === i
-                    ? 'text-gold-200'
-                    : 'text-navy-200/60 border border-gold-700/30 bg-navy-800/40'
+                    ? 'text-gold-text'
+                    : 'text-navy-300 border border-gold-300/20 bg-[rgba(20,26,44,.6)]'
                 }`}
                 title="Set as first dealer"
               >
@@ -257,19 +270,20 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
       </section>
 
       <section className="mb-4 space-y-3">
-        <h2 className="text-lg font-semibold text-gold-100">Settings</h2>
+        <h2 className="font-display font-semibold text-[22px] leading-none text-cream-bright">Settings</h2>
 
         <div className="card-gold px-3 py-2.5">
           <label className="flex items-center justify-between">
-            <span className="text-gray-200">Canadian Rules</span>
+            <span className="text-cream text-sm font-medium">Canadian Rules</span>
             <div
               onClick={() => setCanadianRules(!canadianRules)}
-              className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${
-                canadianRules ? 'bg-gold-300' : 'bg-navy-500'
+              className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors border ${
+                canadianRules ? 'border-gold-text' : 'bg-[#141c33] border-gold-300/25'
               }`}
+              style={canadianRules ? { background: 'linear-gradient(180deg,#f0dda0 0%,#c9a141 45%,#9c7a26 100%)' } : undefined}
             >
-              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                canadianRules ? 'translate-x-5.5' : 'translate-x-0.5'
+              <div className={`absolute top-[2px] w-[18px] h-[18px] rounded-full transition-transform ${
+                canadianRules ? 'bg-white translate-x-[23px]' : 'bg-navy-300 translate-x-[2px]'
               }`} />
             </div>
           </label>
@@ -284,26 +298,40 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
       <button
         onClick={handleStart}
         disabled={!canStart}
-        className="btn-gold w-full py-3 rounded-xl text-lg"
+        className="btn-gold w-full h-12 text-base"
       >
-        Start Game
+        Start game
       </button>
 
       {onShowHistory && (
         <button
           onClick={onShowHistory}
-          className="w-full mt-3 py-2.5 rounded-xl text-sm font-medium text-gold-200 border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60"
+          className="btn-secondary w-full mt-2.5 h-11 text-sm"
         >
-          📜 Player History
+          📜 Player history
         </button>
       )}
 
       <a
         href="https://wizard-multiplayer.web.app/"
-        className="block w-full mt-3 py-2.5 rounded-xl text-sm font-medium text-gold-200 border border-gold-700/50 bg-navy-800/40 active:bg-navy-700/60 text-center no-underline"
+        className="btn-secondary flex items-center justify-center w-full mt-2.5 h-11 text-sm no-underline"
       >
-        ↗ Play Multiplayer
+        ↗ Play multiplayer
       </a>
+
+      {/* Hidden test-mode link — barely visible, enters/exits a throwaway
+          game that never saves to history and uses its own storage slot. */}
+      <div className="text-center mt-6">
+        {isTestMode() ? (
+          <a href="./" className="text-purple-300/70 text-[11px] no-underline active:text-purple-200">
+            exit test mode
+          </a>
+        ) : (
+          <a href="?test" className="text-navy-200/25 text-[11px] no-underline active:text-navy-200/60">
+            test game
+          </a>
+        )}
+      </div>
 
       {/* Dev-only demo panel — localhost only, never shows in production */}
       {!isProduction() && (

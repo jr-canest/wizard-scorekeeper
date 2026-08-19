@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { SUITS } from '../utils/constants';
+import LastRoundToggle from './LastRoundToggle';
 
 export default function PreRoundScreen({
   roundNumber,
@@ -83,34 +84,44 @@ export default function PreRoundScreen({
 
   return (
     <div
-      className="mb-4 select-none"
+      className="mb-4 select-none phase-enter"
       onMouseMove={dragIndex !== null ? handleDragMove : undefined}
       onMouseUp={dragIndex !== null ? handleDragEnd : undefined}
       onTouchMove={dragIndex !== null ? handleDragMove : undefined}
       onTouchEnd={dragIndex !== null ? handleDragEnd : undefined}
     >
-      {/* Round info */}
-      <div className="card-gold p-4 mb-4 text-center">
-        <h2 className="text-xl font-bold text-white">
+      {/* Title block: eyebrow + serif round + ornament + metadata */}
+      <div className="text-center pt-3 mb-4">
+        <div className="eyebrow mb-[7px]">Next round</div>
+        <div className="font-display font-semibold text-[34px] leading-none tracking-[0.01em] text-cream-bright mb-3.5">
           Round {roundNumber}
-        </h2>
-        <p className="text-navy-200 text-sm mt-1">
-          {dealer.name} deals {cardsDealt} card{cardsDealt !== 1 ? 's' : ''} each
-          {isExtraRound && <span className="text-gold-200 ml-1">(max cards)</span>}
-        </p>
-        <p className="text-navy-200/50 text-xs mt-0.5">
-          {roundsLeft > 0
-            ? `${roundsLeft} round${roundsLeft !== 1 ? 's' : ''} left`
-            : 'Final ascending round'
-          }
-        </p>
+        </div>
+        <div className="ornament">
+          <span className="diamond" />
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-3.5 text-xs font-medium text-navy-200">
+          <span>
+            Dealer <span className="text-cream">{dealer.name}</span>
+          </span>
+          <span className="text-steel">·</span>
+          <span>
+            {cardsDealt} card{cardsDealt !== 1 ? 's' : ''}
+            {isExtraRound && <span className="text-gold-text ml-1">(max)</span>}
+          </span>
+          <span className="text-steel">·</span>
+          <span className="text-navy-300">
+            {roundsLeft > 0
+              ? `${roundsLeft} round${roundsLeft !== 1 ? 's' : ''} left`
+              : 'final ascending round'}
+          </span>
+        </div>
       </div>
 
       {/* Player list in seating order — draggable */}
       <div className="card-gold overflow-hidden mb-4">
-        <div className="px-3 py-2 border-b border-gold-700/40 flex items-center justify-between">
-          <span className="text-gold-200/70 text-sm font-medium">Players</span>
-          <span className="text-navy-200/40 text-xs">Hold to reorder</span>
+        <div className="px-3 h-9 flex items-center justify-between border-b border-gold-300/20">
+          <span className="section-label">Players</span>
+          <span className="text-navy-300 text-[10px]">Hold to reorder</span>
         </div>
         <div ref={listRef}>
           {players.map((player, i) => {
@@ -119,7 +130,7 @@ export default function PreRoundScreen({
             return (
               <div
                 key={player.id}
-                className={`flex items-center px-1.5 py-2.5 border-b border-gold-700/20 last:border-0 transition-all ${
+                className={`flex items-center h-11 px-1.5 border-b border-gold-300/10 last:border-0 transition-all ${
                   isDealer ? 'bg-gold-300/5' : ''
                 } ${dragIndex === i ? 'bg-navy-600/50 scale-[1.01]' : ''}`}
                 onMouseDown={e => handleDragStart(e, i)}
@@ -130,15 +141,17 @@ export default function PreRoundScreen({
                 </div>
                 <div className="flex items-center justify-between flex-1 px-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium">{player.name}</span>
+                    <span className="font-display font-semibold text-[17px] text-cream-bright">{player.name}</span>
                     {isDealer && (
-                      <span className="text-gold-200 text-xs bg-gold-300/15 px-1.5 py-0.5 rounded">♛ Dealer</span>
+                      <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.14em] text-gold-text border border-gold-300/30 px-1.5 py-[3px]">
+                        <span className="text-gold-300 text-[11px] leading-none">♛</span> Dealer
+                      </span>
                     )}
                   </div>
-                  <span className={`font-semibold ${
-                    total > 0 ? 'text-green-400' : total < 0 ? 'text-red-400' : 'text-navy-200'
+                  <span className={`font-display font-semibold text-[22px] tabular-nums ${
+                    total > 0 ? 'text-[#6ee7b7]' : total < 0 ? 'text-[#fda4af]' : 'text-cream'
                   }`}>
-                    {total}
+                    {total < 0 ? `−${Math.abs(total)}` : total}
                   </span>
                 </div>
               </div>
@@ -148,65 +161,48 @@ export default function PreRoundScreen({
       </div>
 
       {/* Action buttons */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {/* Main action: Start Round */}
-        <button
-          onClick={onStartRound}
-          className="btn-gold w-full py-3.5 rounded-xl text-lg"
-        >
-          Start Round
+        <button onClick={onStartRound} className="btn-gold w-full h-12 text-base">
+          Start round
         </button>
 
         {/* Trump + Last Round toggle in same row */}
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-stretch">
           <button
             onClick={onSelectTrump}
-            className="card-gold flex-1 py-2.5 font-medium active:bg-navy-600/60 text-sm"
+            className="btn-secondary flex-1 h-11 text-sm"
           >
             {hasTrump && suitInfo ? (
               <span style={{ color: suitInfo.color }}>{trumpLabel}</span>
             ) : (
-              <span className="text-navy-200">{trumpLabel}</span>
+              <span>{trumpLabel}</span>
             )}
           </button>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gold-700/40 bg-navy-800/40">
+          <div className="flex items-center gap-2 px-3 card-gold-subtle">
             <span className="text-navy-200 text-sm whitespace-nowrap">Last Round</span>
-            <button
-              onClick={() => isLastRound ? onUndeclareLastRound() : onDeclareLastRound()}
-              className={`relative inline-flex items-center w-10 h-5 rounded-full transition-colors shrink-0 ${
-                isLastRound ? 'bg-gold-300' : 'bg-navy-600'
-              }`}
-            >
-              <span
-                className="inline-block w-4 h-4 rounded-full bg-white shadow transition-transform"
-                style={{ transform: isLastRound ? 'translateX(22px)' : 'translateX(3px)' }}
-              />
-            </button>
+            <LastRoundToggle
+              isLastRound={isLastRound}
+              onDeclare={onDeclareLastRound}
+              onUndeclare={onUndeclareLastRound}
+            />
           </div>
         </div>
 
-        {/* Change Dealer + Add Player — muted bottom row */}
+        {/* Change Dealer + Add Player — secondary row, visible but quieter
+            than the trump/last-round row above */}
         <div className="flex gap-2">
-          <button
-            onClick={onChangeDealer}
-            className="flex-1 py-2 rounded-lg text-xs text-navy-200/50 bg-navy-700/20 active:bg-navy-600/40"
-          >
-            Change Dealer
+          <button onClick={onChangeDealer} className="btn-secondary flex-1 h-10 text-sm">
+            ♛ Change dealer
           </button>
-          <button
-            onClick={onAddPlayer}
-            className="flex-1 py-2 rounded-lg text-xs text-navy-200/50 bg-navy-700/20 active:bg-navy-600/40"
-          >
-            + Add Player
+          <button onClick={onAddPlayer} className="btn-secondary flex-1 h-10 text-sm">
+            + Add player
           </button>
         </div>
 
-        {/* End Game — very subtle */}
-        <button
-          onClick={onEndGame}
-          className="w-full py-1 text-navy-200/30 text-[10px] active:text-navy-200/60"
-        >
-          End Game
+        {/* End Game — clearly a button, but calmer than the primary */}
+        <button onClick={onEndGame} className="btn-danger w-full h-10 text-sm">
+          End game
         </button>
       </div>
     </div>

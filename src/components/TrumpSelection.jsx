@@ -3,26 +3,26 @@ import { SUITS, SUIT_ORDER, NO_TRUMP } from '../utils/constants';
 export default function TrumpSelection({ dealerName, onSelect }) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-navy-800 border border-gold-700/50 rounded-xl p-5 max-w-sm w-full">
-        <h3 className="text-lg font-semibold text-white mb-3 text-center">Select Trump</h3>
+      <div className="card-gold bg-[#0d1426] p-5 max-w-sm w-full pop-in">
+        <h3 className="font-display font-semibold text-[24px] leading-none text-cream-bright mb-3.5 text-center">Select Trump</h3>
 
-        <div className="bg-navy-700 border border-gold-700/30 rounded-lg p-3 mb-4 text-sm space-y-1">
-          <p className="text-gray-300">
-            <span className="text-gold-200 font-medium">Wizard</span> — {dealerName} chooses
+        <div className="card-gold-subtle p-3 mb-4 text-sm space-y-1">
+          <p className="text-navy-200">
+            <span className="text-gold-text font-medium">Wizard</span> — {dealerName} chooses
           </p>
-          <p className="text-gray-300">
-            <span className="text-blue-400 font-medium">Jester</span> — No trump
+          <p className="text-navy-200">
+            <span className="text-[#7dd3fc] font-medium">Jester</span> — No trump
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-2 gap-2.5 mb-2.5">
           {SUIT_ORDER.map(suit => {
             const info = SUITS[suit];
             return (
               <button
                 key={suit}
                 onClick={() => onSelect(suit)}
-                className="py-4 rounded-xl bg-navy-700 active:bg-navy-600 flex items-center justify-center gap-2 text-lg font-semibold border border-gold-700/30"
+                className="chip h-14 flex items-center justify-center gap-2 !text-lg"
                 style={{ color: info.color }}
               >
                 <span className="text-2xl">{info.symbol}</span>
@@ -33,13 +33,13 @@ export default function TrumpSelection({ dealerName, onSelect }) {
         </div>
         <button
           onClick={() => onSelect(NO_TRUMP)}
-          className="w-full py-4 rounded-xl font-semibold text-lg bg-navy-700 text-navy-100 border border-gold-700/30 active:bg-navy-600 mb-3"
+          className="chip w-full h-14 text-lg mb-2.5"
         >
           No Trump
         </button>
         <button
           onClick={() => onSelect(null)}
-          className="w-full py-3 rounded-xl text-navy-200/60 text-sm bg-navy-700/50 active:bg-navy-600"
+          className="btn-secondary w-full h-10 text-sm"
         >
           N/A — Clear selection
         </button>

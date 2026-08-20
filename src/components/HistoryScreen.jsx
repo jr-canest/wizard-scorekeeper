@@ -83,6 +83,7 @@ export default function HistoryScreen({ onClose }) {
   const [error, setError] = useState(null);
   const [sortKey, setSortKey] = useState('rating');
   const [sortAsc, setSortAsc] = useState(false);
+  const [showScoreless, setShowScoreless] = useState(false);
   // { mode: 'view' | 'pickMergeTarget' | 'confirmMerge' | 'merging', ... }
   const [playerDetail, setPlayerDetail] = useState(null);
   const [mergeError, setMergeError] = useState(null);
@@ -163,13 +164,26 @@ export default function HistoryScreen({ onClose }) {
     }
   }
 
-  const visiblePlayers = players.filter((p) => !p.mergedInto);
+  // Hide merged aliases and test-artifact accounts (any name starting
+  // with "test" — e.g. the multiplayer dev-mode sign-in) from the board.
+  const visiblePlayers = players.filter(
+    (p) =>
+      !p.mergedInto &&
+      !(p.nameLower || p.name || '').toLowerCase().startsWith('test'),
+  );
   const sortedPlayers = [...visiblePlayers].sort((a, b) => {
     const aVal = getPlayerSortValue(a, sortKey, podium);
     const bVal = getPlayerSortValue(b, sortKey, podium);
     const diff = bVal - aVal;
     return sortAsc ? -diff : diff;
   });
+  // Players with zero completed games collapse behind a toggle so
+  // sign-ins that never finished a game don't clutter the board.
+  const playedPlayers = sortedPlayers.filter((p) => (p.gamesPlayed || 0) > 0);
+  const scorelessPlayers = sortedPlayers.filter((p) => (p.gamesPlayed || 0) === 0);
+  const displayPlayers = showScoreless
+    ? [...playedPlayers, ...scorelessPlayers]
+    : playedPlayers;
 
   async function applyMerge(canonical, alias) {
     setMergeError(null);
@@ -297,7 +311,7 @@ export default function HistoryScreen({ onClose }) {
                     </button>
                   ))}
                 </div>
-                {sortedPlayers.map((player, i) => {
+                {displayPlayers.map((player, i) => {
                   const gp = player.gamesPlayed || 0;
                   const avg = gp > 0 ? Math.round(player.totalScore / gp) : 0;
                   const winRate = gp > 0 ? Math.round(((player.wins || 0) / gp) * 100) : 0;
@@ -353,6 +367,16 @@ export default function HistoryScreen({ onClose }) {
                     </button>
                   );
                 })}
+                {scorelessPlayers.length > 0 && (
+                  <button
+                    onClick={() => setShowScoreless(!showScoreless)}
+                    className="w-full h-9 text-[11px] font-semibold uppercase tracking-[0.12em] text-navy-300 active:text-cream border-t border-gold-300/10"
+                  >
+                    {showScoreless
+                      ? 'Hide scoreless'
+                      : `Show ${scorelessPlayers.length} scoreless`}
+                  </button>
+                )}
               </div>
             )}
             {sortedPlayers.length > 0 && (

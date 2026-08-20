@@ -197,6 +197,8 @@ games/{gameId}:
 - **All-Time Stats tab** — sorted by **Rating** (default), shows: rating, win%, wins, games played, avg score (best score moved to the player detail modal)
   - **Rating** (`src/utils/ratings.js`) = podium points per game with a reliability damper: 3/2/1 pts for 1st/2nd/3rd but **last place never scores** (so a 2-player loss earns nothing), divided by `gamesPlayed + 3`. Fixes raw win% ranking a one-game winner above consistent regulars. Computed client-side from up to 300 recent game docs (fetched on history open, follows `mergedInto` chains + name/alias fallback), cached in the history SWR cache as `podium`. Player detail modal shows 🥇🥈🥉 podium counts + rating tile. Explainer footnote under the table.
   - All column headers tappable to sort ascending/descending (arrow indicator on active column)
+  - Players named `test*` are hidden from the board (belt-and-braces vs the multiplayer dev-mode sign-in; the actual Test/TestJC docs were deleted 2026-08-20 via `wizard-multiplayer/scripts/delete-test-players_V01.mjs`)
+  - Players with 0 completed games collapse behind a "Show N scoreless" toggle row at the bottom of the table (same in multiplayer's /history)
 - **Past Games tab** — reverse chronological (30 most recent), shows all players with ranks, scores, shame points per game
 
 ---

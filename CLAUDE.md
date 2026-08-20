@@ -199,7 +199,7 @@ games/{gameId}:
   - All column headers tappable to sort ascending/descending (arrow indicator on active column)
   - Players named `test*` are hidden from the board (belt-and-braces vs the multiplayer dev-mode sign-in; the actual Test/TestJC docs were deleted 2026-08-20 via `wizard-multiplayer/scripts/delete-test-players_V01.mjs`)
   - Players with 0 completed games collapse behind a "Show N scoreless" toggle row at the bottom of the table (same in multiplayer's /history)
-- **Past Games tab** — reverse chronological (30 most recent), shows all players with ranks, scores, shame points per game
+- **Past Games tab** — reverse chronological (30 most recent), shows all players with ranks, scores, shame points per game; games played in the multiplayer app get a sky-blue `.online-chip` badge (detected via `source: 'multiplayer'`, or a `log` field on pre-source games) — same in multiplayer's /history
 
 ---
 

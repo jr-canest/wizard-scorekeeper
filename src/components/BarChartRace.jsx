@@ -432,7 +432,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
               <circle
                 cx={x} cy={dotY} r="5"
                 fill={playerColors[p.id]}
-                stroke="#0e1a38" strokeWidth="1.5"
+                stroke="#0b1224" strokeWidth="1.5"
               />
               {/*
                 Labels position via `y` attribute only — the Y value is already

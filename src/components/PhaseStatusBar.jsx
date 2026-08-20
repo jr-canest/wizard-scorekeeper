@@ -18,7 +18,7 @@ export default function PhaseStatusBar({ eyebrow, roundNumber, total, target, st
         </div>
       </div>
       <div className="text-right">
-        <div className={`font-display font-semibold text-[30px] leading-none tabular-nums ${toneText}`}>
+        <div className={`font-bold text-[24px] leading-none tabular-nums ${toneText}`}>
           {total}
           <span className="text-steel">/{target}</span>
         </div>

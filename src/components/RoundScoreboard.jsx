@@ -82,14 +82,14 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
                   <span className="shame-chip shrink-0">shame{shame > 1 ? ` ×${shame}` : ''}</span>
                 )}
               </span>
-              <span className="font-display font-medium text-base text-cream text-center tabular-nums">{bid}</span>
-              <span className={`font-display font-semibold text-base text-center tabular-nums ${
+              <span className="font-semibold text-sm text-cream text-center tabular-nums">{bid}</span>
+              <span className={`font-semibold text-sm text-center tabular-nums ${
                 hit ? 'text-[#6ee7b7]' : 'text-[#fda4af]'
               }`}>
                 {tricks}
               </span>
               <span className="text-right">
-                <span className="block font-display font-semibold text-[22px] leading-none tabular-nums text-gold-text">
+                <span className="block font-bold text-[18px] leading-none tabular-nums text-gold-text">
                   {formatNum(total)}
                 </span>
                 <span className={`block mt-1 text-[10px] font-semibold leading-none ${
@@ -126,7 +126,7 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
                   <tr key={r.roundNumber} className={`border-b border-gold-300/10 ${
                     r.roundNumber === round.roundNumber ? 'bg-gold-300/5' : ''
                   }`}>
-                    <td className="py-1.5 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-display font-medium text-[15px]">{r.roundNumber}</td>
+                    <td className="py-1.5 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-semibold text-[12px] tabular-nums">{r.roundNumber}</td>
                     {activePlayers.map(player => {
                       const score = r.scores[player.id];
                       if (score === undefined) {
@@ -136,7 +136,7 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
                       const isWinner = winnerIds.includes(player.id);
                       return (
                         <td key={player.id} className={`py-1.5 px-2 text-center ${isWinner ? 'bg-gold-300/[.07]' : ''}`}>
-                          <span className={`font-display font-semibold text-[15px] tabular-nums ${isWinner ? 'text-gold-text' : 'text-cream'}`}>
+                          <span className={`font-semibold text-[13px] tabular-nums ${isWinner ? 'text-gold-text' : 'text-cream'}`}>
                             {runningTotal < 0 ? `−${Math.abs(runningTotal)}` : runningTotal}
                           </span>
                           <span className={`ml-0.5 text-[10px] font-semibold ${

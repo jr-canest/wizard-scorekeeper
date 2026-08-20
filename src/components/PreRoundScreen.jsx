@@ -148,7 +148,7 @@ export default function PreRoundScreen({
                       </span>
                     )}
                   </div>
-                  <span className={`font-display font-semibold text-[22px] tabular-nums ${
+                  <span className={`font-bold text-[18px] tabular-nums ${
                     total > 0 ? 'text-[#6ee7b7]' : total < 0 ? 'text-[#fda4af]' : 'text-cream'
                   }`}>
                     {total < 0 ? `−${Math.abs(total)}` : total}

@@ -120,7 +120,7 @@ export default function TricksPhase({ players, dealerId, cardsDealt, roundNumber
                 </span>
                 <div className="flex items-center gap-2.5">
                   {hasTrick ? (
-                    <span className={`font-display font-semibold text-[22px] leading-none tabular-nums ${
+                    <span className={`font-bold text-[18px] leading-none tabular-nums ${
                       selectedTrick === bid ? 'text-[#6ee7b7]' : 'text-[#fda4af]'
                     }`}>
                       {selectedTrick}<span className="text-steel">/{bid}</span>

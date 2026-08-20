@@ -339,13 +339,13 @@ export default function HistoryScreen({ onClose }) {
                           </span>
                         )}
                       </div>
-                      <span className="text-center font-display font-semibold text-[15px] text-gold-text tabular-nums">
+                      <span className="text-center font-bold text-[13px] text-gold-text tabular-nums">
                         {rating.toFixed(2)}
                       </span>
-                      <span className="text-center font-display font-medium text-[15px] text-cream tabular-nums">{winRate}%</span>
-                      <span className="text-center font-display font-semibold text-[15px] text-[#6ee7b7] tabular-nums">{player.wins || 0}</span>
-                      <span className="text-center font-display font-medium text-[15px] text-navy-200 tabular-nums">{gp}</span>
-                      <span className={`text-right font-display font-medium text-[15px] tabular-nums ${
+                      <span className="text-center font-semibold text-[13px] text-cream tabular-nums">{winRate}%</span>
+                      <span className="text-center font-semibold text-[13px] text-[#6ee7b7] tabular-nums">{player.wins || 0}</span>
+                      <span className="text-center font-medium text-[13px] text-navy-200 tabular-nums">{gp}</span>
+                      <span className={`text-right font-semibold text-[13px] tabular-nums ${
                         avg > 0 ? 'text-[#6ee7b7]' : avg < 0 ? 'text-[#fda4af]' : 'text-navy-200'
                       }`}>
                         {formatNum(avg)}
@@ -408,7 +408,7 @@ export default function HistoryScreen({ onClose }) {
                                   <span className="shame-chip">shame{r.shamePoints > 1 ? ` ×${r.shamePoints}` : ''}</span>
                                 )}
                               </div>
-                              <span className={`font-display font-semibold text-[17px] leading-none tabular-nums ${
+                              <span className={`font-bold text-[15px] leading-none tabular-nums ${
                                 r.score > 0 ? 'text-[#6ee7b7]' : r.score < 0 ? 'text-[#fda4af]' : 'text-cream'
                               }`}>
                                 {formatNum(r.score)}
@@ -625,9 +625,9 @@ function PlayerViewBody({ player, podium, onStartMerge, onSetPrimary }) {
       </div>
       <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-3 py-2 flex items-center justify-center gap-4">
         <span className="section-label">Podiums</span>
-        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥇 {pod.firsts}</span>
-        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥈 {pod.seconds}</span>
-        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥉 {pod.thirds}</span>
+        <span className="font-semibold text-[15px] text-cream tabular-nums">🥇 {pod.firsts}</span>
+        <span className="font-semibold text-[15px] text-cream tabular-nums">🥈 {pod.seconds}</span>
+        <span className="font-semibold text-[15px] text-cream tabular-nums">🥉 {pod.thirds}</span>
       </div>
       <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
         <p className="text-xs uppercase tracking-wider text-navy-200 mb-1">Display name</p>
@@ -651,8 +651,8 @@ function PlayerViewBody({ player, podium, onStartMerge, onSetPrimary }) {
                     onClick={() => onSetPrimary?.(n)}
                     className={`text-sm px-2.5 py-1 rounded-full border tabular-nums transition ${
                       isCurrent
-                        ? 'bg-gold-300/15 border-gold-400 text-gold-100 font-semibold'
-                        : 'bg-navy-800 border-gold-700/50 text-navy-100 active:scale-[0.97]'
+                        ? 'bg-gold-300/15 border-gold-400 text-gold-text font-semibold'
+                        : 'bg-[rgba(20,26,44,.8)] border-gold-300/25 text-navy-200 active:scale-[0.97]'
                     }`}
                   >
                     {n}{isCurrent ? ' ✓' : ''}
@@ -666,7 +666,7 @@ function PlayerViewBody({ player, podium, onStartMerge, onSetPrimary }) {
       <button
         type="button"
         onClick={onStartMerge}
-        className="w-full rounded-lg py-2.5 text-sm font-semibold bg-navy-800 border border-gold-700/60 text-gold-200 active:scale-[0.99]"
+        className="btn-secondary w-full py-2.5 text-sm"
       >
         Merge {player.name} into another player…
       </button>
@@ -684,15 +684,15 @@ function PlayerPickBody({ self, visiblePlayers, onPick }) {
   return (
     <>
       <p className="text-xs text-navy-200">
-        Stats from <span className="text-gold-100">{self.name}</span> will be folded into the player you pick, and{' '}
-        <span className="text-gold-100">{self.name}</span> will be hidden from this list.
+        Stats from <span className="text-gold-text">{self.name}</span> will be folded into the player you pick, and{' '}
+        <span className="text-gold-text">{self.name}</span> will be hidden from this list.
       </p>
       <input
         type="text"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Search players…"
-        className="w-full rounded-md bg-navy-800 border border-gold-700/60 px-2.5 py-1.5 text-sm text-navy-50 placeholder:text-navy-300 focus:outline-none focus:border-gold-400"
+        className="w-full rounded-lg bg-[rgba(20,26,44,.8)] border border-gold-300/25 px-2.5 py-1.5 text-sm text-cream placeholder:text-navy-300 focus:outline-none focus:border-gold-300"
       />
       <div
         className="overflow-y-auto rounded-md border border-gold-700/30 divide-y divide-gold-700/20"
@@ -723,8 +723,8 @@ function MergeConfirmBody({ alias, canonical, mergeError, isMerging, onConfirm, 
     <>
       <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-3 space-y-2 text-sm">
         <p className="text-navy-50">
-          Merge <span className="text-gold-100 font-bold">{alias.name}</span> INTO{' '}
-          <span className="text-gold-100 font-bold">{canonical.name}</span>?
+          Merge <span className="text-gold-text font-bold">{alias.name}</span> INTO{' '}
+          <span className="text-gold-text font-bold">{canonical.name}</span>?
         </p>
         <ul className="text-xs text-navy-200 space-y-1">
           <li>• Stats from both rows are summed onto {canonical.name}.</li>
@@ -738,7 +738,7 @@ function MergeConfirmBody({ alias, canonical, mergeError, isMerging, onConfirm, 
           type="button"
           onClick={onCancel}
           disabled={isMerging}
-          className="flex-1 rounded-lg py-2.5 text-sm font-semibold bg-navy-800 border border-gold-700/60 text-navy-100 active:scale-[0.99] disabled:opacity-50"
+          className="btn-secondary flex-1 py-2.5 text-sm disabled:opacity-50"
         >
           Cancel
         </button>
@@ -762,7 +762,7 @@ function Stat({ label, value, highlight }) {
   return (
     <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-2 py-2.5 min-h-[3.25rem] flex flex-col items-center justify-center gap-1.5">
       <p className="section-label">{label}</p>
-      <p className={`font-display font-semibold text-[19px] tabular-nums leading-none ${
+      <p className={`font-bold text-[16px] tabular-nums leading-none ${
         highlight ? 'text-gold-text' : 'text-cream'
       }`}>{value}</p>
     </div>
@@ -924,7 +924,7 @@ function GameDetailOverlay({
                   type="button"
                   onClick={onCancelDelete}
                   disabled={isDeleting}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-semibold bg-navy-800 border border-gold-700/60 text-navy-100 active:scale-[0.99] disabled:opacity-50"
+                  className="btn-secondary flex-1 py-2.5 text-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -959,7 +959,7 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
               {playerOrder.map((n) => (
                 <th
                   key={n}
-                  className="font-display font-semibold text-[12px] text-cream px-1 text-right truncate max-w-[60px]"
+                  className="font-semibold text-[11px] text-cream px-1 text-right truncate max-w-[60px]"
                   title={n}
                 >
                   {n.length > 6 ? `${n.slice(0, 5)}…` : n}
@@ -974,7 +974,7 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
               }
               return (
                 <tr key={r.round} className="border-t border-gold-300/10 align-top">
-                  <td className="pr-1 text-gold-text font-display font-medium text-[13px] sticky left-0 bg-navy-900/50 z-10 py-1">{r.round}</td>
+                  <td className="pr-1 text-gold-text font-semibold text-[11px] tabular-nums sticky left-0 bg-navy-900/50 z-10 py-1">{r.round}</td>
                   {playerOrder.map((n) => {
                     const bid = r.bids[n];
                     const won = r.tricks[n] || 0;

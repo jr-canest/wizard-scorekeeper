@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 /* ─── Design kit "1b Evolve" (shared with wizard-multiplayer) ───
-   Two families: display serif (Cormorant Garamond) for round titles,
-   player names and all numerals; UI sans for labels/buttons/status. */
+   TYPOGRAPHY RULES (keep both apps identical):
+   - Serif (`font-display`, Cormorant Garamond) is for IDENTITY and
+     NARRATIVE only: screen titles ("Round 3", "History"), player
+     names, room codes, and the AI recap prose. Never below 13px —
+     smaller contexts (opponent-tile name labels) use sans.
+   - Sans (default) is for ALL DATA and UI: every numeral (always
+     `tabular-nums`, semibold/bold), labels, buttons, chips, status
+     words, metadata. Numerals are NEVER serif. */
 
 @theme {
   --color-gold-50: #fff9e6;
@@ -152,9 +158,8 @@ body {
   border: 1px solid rgba(212, 168, 67, 0.25);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   color: #ece0c4;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 17px;
+  font-weight: 700;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 .chip:active {

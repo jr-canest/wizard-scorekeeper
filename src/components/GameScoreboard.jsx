@@ -368,7 +368,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
                     </span>
                   )}
                 </div>
-                <span className={`font-display font-semibold text-[26px] leading-none tabular-nums ${
+                <span className={`font-bold text-[22px] leading-none tabular-nums ${
                   total > 0 ? 'text-[#6ee7b7]' : total < 0 ? 'text-[#fda4af]' : 'text-cream'
                 }`}>
                   {formatNum(total)}
@@ -397,7 +397,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
                   const winnerIds = getRoundWinnerIds(round);
                   return (
                   <tr key={round.roundNumber} className="border-b border-gold-300/10">
-                    <td className="py-2 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-display font-medium text-[15px]">{round.roundNumber}</td>
+                    <td className="py-2 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-semibold text-[12px] tabular-nums">{round.roundNumber}</td>
                     {sortedPlayers.map(player => {
                       const score = round.scores[player.id];
                       const wasPlaying = player.addedInRound <= round.roundNumber;
@@ -408,7 +408,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
                       const isWinner = winnerIds.includes(player.id);
                       return (
                         <td key={player.id} className={`py-2 px-2 text-center ${isWinner ? 'bg-gold-300/[.07]' : ''}`}>
-                          <span className={`font-display font-semibold text-[15px] tabular-nums ${isWinner ? 'text-gold-text' : 'text-cream'}`}>{formatNum(runningTotal)}</span>
+                          <span className={`font-semibold text-[13px] tabular-nums ${isWinner ? 'text-gold-text' : 'text-cream'}`}>{formatNum(runningTotal)}</span>
                           <span className={`ml-0.5 text-[10px] font-semibold ${
                             score > 0 ? 'text-[#6ee7b7]' : 'text-[#fda4af]'
                           }`}>

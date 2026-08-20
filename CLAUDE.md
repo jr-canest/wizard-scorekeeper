@@ -120,7 +120,7 @@ wizard-scorekeeper/
 
 - **Design kit "1b Evolve"** (2026-08-19, from `Wizard Game/_Design/design_handoff_wizard_1b/README.md` — shared with wizard-multiplayer, keep the two in lockstep)
   - Darker bg gradient (#0b1224 → #040913); frame gutter 14px (`px-3.5`)
-  - Two type families: **Cormorant Garamond** (Google Fonts, loaded in index.html) for round titles, player names and ALL numerals (`font-display`, tabular-nums); UI sans for labels/buttons/status
+  - **Typography rules (2026-08-20, applies to BOTH apps):** serif (`font-display`, Cormorant Garamond via Google Fonts) is for IDENTITY and NARRATIVE only — screen titles ("Round 3", "History"), player names, room codes, AI recap prose; never below 13px (smaller name contexts use sans). Sans (default) is for ALL DATA and UI: **every numeral** (always `tabular-nums`, semibold/bold), labels, buttons, chips, status words, metadata. Numerals are NEVER serif.
   - Kit tokens in `@theme`: `cream` #ece0c4, `cream-bright` #f7f0dd, `gold-text` #e2c579, `steel` #2e3a55; kit classes in index.css: `.btn-gold` (new lighter gradient, radius 8), `.btn-secondary`, `.btn-header`, `.btn-danger`, `.card-gold` (panel gradient + inset highlight), `.card-gold-active` (warm gold active), `.card-gold-subtle` (quiet row), `.chip`/`.chip-selected`/`.chip-locked`/`.chip-disabled` (number buttons), `.eyebrow`, `.section-label`, `.ornament` + `.diamond` (hairline ◆ rule), `.shame-chip`
   - NOTE: kit classes are unlayered CSS, so they beat Tailwind utilities — don't try to override e.g. `.chip` font-size with a `text-*` utility
   - Shared 50px header: ghost text action · ◆ logo ◆ · "Scores" btn-header; title blocks = eyebrow + serif Round N + ornament + metadata row (`Trump ♥ Hearts · Dealer X · N cards`, trump tappable during rounds — `RoundMeta.jsx`; RoundHeader.jsx retired)
@@ -193,7 +193,7 @@ games/{gameId}:
 ## History Screen
 
 - Accessible from: setup screen ("📜 Player History" button), game over header, mid-game scoreboard header
-- Styled with the 1b Evolve kit (serif names/numerals, card-gold panels, shame-chips, true minus signs) — restyled 2026-08-20 after the original kit pass missed this screen
+- Styled with the 1b Evolve kit (serif names, sans numerals, card-gold panels, shame-chips, true minus signs) — restyled 2026-08-20 after the original kit pass missed this screen
 - **All-Time Stats tab** — sorted by **Rating** (default), shows: rating, win%, wins, games played, avg score (best score moved to the player detail modal)
   - **Rating** (`src/utils/ratings.js`) = podium points per game with a reliability damper: 3/2/1 pts for 1st/2nd/3rd but **last place never scores** (so a 2-player loss earns nothing), divided by `gamesPlayed + 3`. Fixes raw win% ranking a one-game winner above consistent regulars. Computed client-side from up to 300 recent game docs (fetched on history open, follows `mergedInto` chains + name/alias fallback), cached in the history SWR cache as `podium`. Player detail modal shows 🥇🥈🥉 podium counts + rating tile. Explainer footnote under the table.
   - All column headers tappable to sort ascending/descending (arrow indicator on active column)

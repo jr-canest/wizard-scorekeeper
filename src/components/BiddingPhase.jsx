@@ -117,7 +117,7 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
                 </span>
                 <div className="flex items-center gap-2.5">
                   {hasBid ? (
-                    <span className="font-display font-semibold text-[22px] leading-none tabular-nums text-gold-text">
+                    <span className="font-bold text-[18px] leading-none tabular-nums text-gold-text">
                       {selectedBid}
                     </span>
                   ) : isNext ? (

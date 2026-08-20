@@ -24,7 +24,7 @@
   - Collections: `players` (case-insensitive name matching via `nameLower`), `games` (results per game)
 - **Firebase Cloud Functions** (Blaze plan) for AI-generated game summaries
   - `generateGameSummary` — us-central1, Node 20, callable
-  - Calls Anthropic Claude Haiku 4.5 via `@anthropic-ai/sdk`
+  - Calls Anthropic Claude Sonnet 5 via `@anthropic-ai/sdk`
   - API key stored as secret: `ANTHROPIC_API_KEY` (Google Secret Manager)
   - Deploy: `firebase deploy --only functions`
   - Updates: `firebase functions:secrets:set ANTHROPIC_API_KEY`
@@ -142,7 +142,8 @@ wizard-scorekeeper/
   - Medal emojis: 🥇🥈🥉 for top 3 ranks
   - Game results auto-saved to Firebase (production only)
   - Dynamic game summary sentence at the top with bold player names (via `<b>` tags + `dangerouslySetInnerHTML`)
-  - **AI-generated** via Claude Haiku 4.5 through `generateGameSummary` Cloud Function in production
+  - **AI-generated** via Claude Sonnet 5 through `generateGameSummary` Cloud Function in production (prompt picks a random narrator voice per game for variety; roast-y, 50-85 words)
+  - ⚠️ The function's CORS allowlist must include the `*.web.app` hosting origins — it originally only allowed GitHub Pages, so after the hosting move every production game silently fell back to the deterministic sentences (fixed 2026-08-20; functions deploy is manual)
   - Payload includes: final standings, shame points, round count, lead changes, comeback rank, negative-score count, Canadian rules
   - Deterministic fallback sentences in `gameSummary.js` used on localhost and if API call fails
   - Fallback categories: dominance (margin ≥30%), close (margin ≤20), comeback (1st was ≥3rd at midpoint), chaotic (4+ lead changes), meltdown (2+ negative scores), steady (default), tied_first, fallback (<3 players)
@@ -192,9 +193,11 @@ games/{gameId}:
 ## History Screen
 
 - Accessible from: setup screen ("📜 Player History" button), game over header, mid-game scoreboard header
-- **All-Time Stats tab** — sorted by win rate, shows: win%, wins, games played, avg score, best score, shame points
+- Styled with the 1b Evolve kit (serif names/numerals, card-gold panels, shame-chips, true minus signs) — restyled 2026-08-20 after the original kit pass missed this screen
+- **All-Time Stats tab** — sorted by **Rating** (default), shows: rating, win%, wins, games played, avg score (best score moved to the player detail modal)
+  - **Rating** (`src/utils/ratings.js`) = podium points per game with a reliability damper: 3/2/1 pts for 1st/2nd/3rd but **last place never scores** (so a 2-player loss earns nothing), divided by `gamesPlayed + 3`. Fixes raw win% ranking a one-game winner above consistent regulars. Computed client-side from up to 300 recent game docs (fetched on history open, follows `mergedInto` chains + name/alias fallback), cached in the history SWR cache as `podium`. Player detail modal shows 🥇🥈🥉 podium counts + rating tile. Explainer footnote under the table.
   - All column headers tappable to sort ascending/descending (arrow indicator on active column)
-- **Past Games tab** — reverse chronological, shows all players with ranks, scores, shame points per game
+- **Past Games tab** — reverse chronological (30 most recent), shows all players with ranks, scores, shame points per game
 
 ---
 

@@ -76,7 +76,7 @@ function normalizeTimestamp(ts) {
   return ts;
 }
 
-/** Read the cached { players, games, cachedAt } or null. */
+/** Read the cached { players, games, podium, cachedAt } or null. */
 export function readHistoryCache() {
   try {
     const raw = localStorage.getItem(HISTORY_CACHE_KEY);
@@ -91,13 +91,13 @@ export function readHistoryCache() {
   }
 }
 
-/** Persist the latest players + games for instant re-opens. */
-export function writeHistoryCache(players, games) {
+/** Persist the latest players + games + podium stats for instant re-opens. */
+export function writeHistoryCache(players, games, podium = {}) {
   try {
     const safeGames = games.map((g) => ({ ...g, date: normalizeTimestamp(g.date) }));
     localStorage.setItem(
       HISTORY_CACHE_KEY,
-      JSON.stringify({ players, games: safeGames, cachedAt: Date.now() }),
+      JSON.stringify({ players, games: safeGames, podium, cachedAt: Date.now() }),
     );
   } catch {
     // storage full or unavailable — cache is best-effort

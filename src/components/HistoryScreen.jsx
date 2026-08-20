@@ -11,27 +11,34 @@ import {
 } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { computePodiumStats, ratingForPlayer } from '../utils/ratings';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
 const SORT_COLUMNS = [
+  { key: 'rating', label: 'Rtg' },
   { key: 'winRate', label: 'Win%' },
   { key: 'wins', label: 'W' },
   { key: 'gamesPlayed', label: 'GP' },
   { key: 'avg', label: 'Avg' },
-  { key: 'bestScore', label: 'Best' },
 ];
 
 // Shared CSS grid template for the All-Time Stats header + rows.
 // Applying the same template to both eliminates any header/row drift
 // — a column-width change here updates both at once.
-//   rank | name (truncating) | Win% | W | GP | Avg | Best
+//   rank | name (truncating) | Rtg | Win% | W | GP | Avg
 const STATS_GRID =
-  'grid grid-cols-[24px_minmax(0,1fr)_44px_26px_26px_44px_44px] items-center';
+  'grid grid-cols-[24px_minmax(0,1fr)_46px_44px_26px_26px_40px] items-center';
 
-function getPlayerSortValue(player, key) {
+// True minus sign (U+2212) for negatives, per the 1b kit
+function formatNum(n) {
+  return n < 0 ? `−${Math.abs(n)}` : `${n}`;
+}
+
+function getPlayerSortValue(player, key, podiumStats) {
   const gp = player.gamesPlayed || 0;
   switch (key) {
+    case 'rating': return ratingForPlayer(player, podiumStats);
     case 'winRate': return gp > 0 ? (player.wins || 0) / gp : 0;
     case 'wins': return player.wins || 0;
     case 'gamesPlayed': return gp;
@@ -70,10 +77,11 @@ export default function HistoryScreen({ onClose }) {
   const [tab, setTab] = useState('players'); // 'players' | 'games'
   const [players, setPlayers] = useState(cache?.players || []);
   const [games, setGames] = useState(cache?.games || []);
+  const [podium, setPodium] = useState(cache?.podium || {});
   const [loading, setLoading] = useState(!cache);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [sortKey, setSortKey] = useState('winRate');
+  const [sortKey, setSortKey] = useState('rating');
   const [sortAsc, setSortAsc] = useState(false);
   // { mode: 'view' | 'pickMergeTarget' | 'confirmMerge' | 'merging', ... }
   const [playerDetail, setPlayerDetail] = useState(null);
@@ -101,13 +109,16 @@ export default function HistoryScreen({ onClose }) {
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('timeout')), 15000),
     );
+    // Fetch a wide window of games (not just the 30 shown in Past
+    // Games) so the podium Rating counts every recorded finish.
     Promise.race([
-      Promise.all([getAllPlayers(), getRecentGames(30)]),
+      Promise.all([getAllPlayers(), getRecentGames(300)]),
       timeout,
     ])
       .then(([p, g]) => {
         setPlayers(p);
-        setGames(g);
+        setPodium(computePodiumStats(p, g));
+        setGames(g.slice(0, 30));
       })
       .catch((err) => {
         console.error('Failed to load history:', err);
@@ -140,8 +151,8 @@ export default function HistoryScreen({ onClose }) {
   useEffect(() => {
     if (loading) return;
     if (players.length === 0 && games.length === 0) return;
-    writeHistoryCache(players, games);
-  }, [players, games, loading]);
+    writeHistoryCache(players, games, podium);
+  }, [players, games, podium, loading]);
 
   function handleSort(key) {
     if (sortKey === key) {
@@ -154,8 +165,8 @@ export default function HistoryScreen({ onClose }) {
 
   const visiblePlayers = players.filter((p) => !p.mergedInto);
   const sortedPlayers = [...visiblePlayers].sort((a, b) => {
-    const aVal = getPlayerSortValue(a, sortKey);
-    const bVal = getPlayerSortValue(b, sortKey);
+    const aVal = getPlayerSortValue(a, sortKey, podium);
+    const bVal = getPlayerSortValue(b, sortKey, podium);
     const diff = bVal - aVal;
     return sortAsc ? -diff : diff;
   });
@@ -204,12 +215,14 @@ export default function HistoryScreen({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-40 overflow-auto"
-      style={{ background: 'linear-gradient(180deg, #0e1a38 0%, #091228 50%, #060d1e 100%)' }}>
-      <div className="p-4 max-w-md mx-auto">
+      style={{ background: 'linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%)' }}>
+      <div className="p-4 max-w-md mx-auto phase-enter">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-baseline gap-2">
-            <h2 className="text-xl font-bold text-white">History</h2>
+            <h2 className="font-display font-semibold text-[28px] leading-none text-cream-bright">
+              History
+            </h2>
             {refreshing && (
               <span className="text-navy-200/60 text-xs">refreshing…</span>
             )}
@@ -226,21 +239,13 @@ export default function HistoryScreen({ onClose }) {
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setTab('players')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'players'
-                ? 'btn-gold'
-                : 'bg-navy-700/60 text-navy-200 active:bg-navy-600/60'
-            }`}
+            className={`flex-1 py-2 text-sm ${tab === 'players' ? 'btn-gold' : 'btn-secondary'}`}
           >
             All-Time Stats
           </button>
           <button
             onClick={() => setTab('games')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === 'games'
-                ? 'btn-gold'
-                : 'bg-navy-700/60 text-navy-200 active:bg-navy-600/60'
-            }`}
+            className={`flex-1 py-2 text-sm ${tab === 'games' ? 'btn-gold' : 'btn-secondary'}`}
           >
             Past Games
           </button>
@@ -276,7 +281,7 @@ export default function HistoryScreen({ onClose }) {
             ) : (
               <div className="card-gold overflow-hidden">
                 <div
-                  className={`${STATS_GRID} px-3 py-2 border-b border-gold-700/40 text-gold-200/70 text-xs font-medium`}
+                  className={`${STATS_GRID} px-3 py-2 border-b border-gold-300/20 text-navy-300 text-[10px] font-semibold uppercase tracking-[0.12em]`}
                 >
                   <span />
                   <span>Player</span>
@@ -284,9 +289,9 @@ export default function HistoryScreen({ onClose }) {
                     <button
                       key={col.key}
                       onClick={() => handleSort(col.key)}
-                      className={`active:text-gold-100 ${
-                        col.key === 'bestScore' ? 'text-right' : 'text-center'
-                      } ${sortKey === col.key ? 'text-gold-200' : ''}`}
+                      className={`active:text-gold-text ${
+                        col.key === 'avg' ? 'text-right' : 'text-center'
+                      } ${sortKey === col.key ? 'text-gold-text' : ''}`}
                     >
                       {col.label}{sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
                     </button>
@@ -296,6 +301,7 @@ export default function HistoryScreen({ onClose }) {
                   const gp = player.gamesPlayed || 0;
                   const avg = gp > 0 ? Math.round(player.totalScore / gp) : 0;
                   const winRate = gp > 0 ? Math.round(((player.wins || 0) / gp) * 100) : 0;
+                  const rating = ratingForPlayer(player, podium);
                   const medal = i < 3 ? medalEmojis[i] : null;
                   const hasAliases = (player.aliases || []).length > 0;
                   return (
@@ -306,16 +312,16 @@ export default function HistoryScreen({ onClose }) {
                         setMergeError(null);
                         setPlayerDetail({ mode: 'view', player });
                       }}
-                      className={`w-full text-left ${STATS_GRID} px-3 py-2.5 border-b border-gold-700/20 last:border-0 active:bg-navy-700/40 ${
-                        i === 0 ? 'bg-gold-300/8' : ''
+                      className={`w-full text-left ${STATS_GRID} px-3 py-2.5 border-b border-gold-300/10 last:border-0 active:bg-navy-700/40 ${
+                        i === 0 ? 'bg-gold-300/[.07]' : ''
                       }`}
                     >
-                      <span className={`text-sm font-bold ${i === 0 ? 'text-gold-200' : 'text-navy-200'}`}>
+                      <span className={`text-sm font-bold ${i === 0 ? 'text-gold-text' : 'text-navy-200'}`}>
                         {medal || `${i + 1}.`}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-white font-medium text-sm truncate min-w-0">
+                          <span className="font-display font-semibold text-[15px] text-cream-bright truncate min-w-0">
                             {player.name}
                           </span>
                           {hasAliases && (
@@ -328,26 +334,33 @@ export default function HistoryScreen({ onClose }) {
                           )}
                         </div>
                         {(player.totalShamePoints || 0) > 0 && (
-                          <span className="text-red-400 text-[10px] block">
-                            💀 {player.totalShamePoints}
+                          <span className="shame-chip mt-0.5 inline-block">
+                            shame{player.totalShamePoints > 1 ? ` ×${player.totalShamePoints}` : ''}
                           </span>
                         )}
                       </div>
-                      <span className="text-center text-gold-100 text-sm font-semibold tabular-nums">{winRate}%</span>
-                      <span className="text-center text-green-400 text-sm font-semibold tabular-nums">{player.wins || 0}</span>
-                      <span className="text-center text-navy-200 text-sm tabular-nums">{gp}</span>
-                      <span className={`text-center text-sm font-medium tabular-nums ${
-                        avg > 0 ? 'text-green-400' : avg < 0 ? 'text-red-400' : 'text-navy-200'
-                      }`}>
-                        {avg}
+                      <span className="text-center font-display font-semibold text-[15px] text-gold-text tabular-nums">
+                        {rating.toFixed(2)}
                       </span>
-                      <span className="text-right text-gold-200 text-sm font-medium tabular-nums">
-                        {player.bestScore ?? '—'}
+                      <span className="text-center font-display font-medium text-[15px] text-cream tabular-nums">{winRate}%</span>
+                      <span className="text-center font-display font-semibold text-[15px] text-[#6ee7b7] tabular-nums">{player.wins || 0}</span>
+                      <span className="text-center font-display font-medium text-[15px] text-navy-200 tabular-nums">{gp}</span>
+                      <span className={`text-right font-display font-medium text-[15px] tabular-nums ${
+                        avg > 0 ? 'text-[#6ee7b7]' : avg < 0 ? 'text-[#fda4af]' : 'text-navy-200'
+                      }`}>
+                        {formatNum(avg)}
                       </span>
                     </button>
                   );
                 })}
               </div>
+            )}
+            {sortedPlayers.length > 0 && (
+              <p className="text-[10px] text-navy-300 leading-relaxed mt-2 px-1">
+                Rtg = podium points per game (🥇 3 · 🥈 2 · 🥉 1, last place scores 0),
+                divided by games played + 3 — so one lucky night can't top the board,
+                and consistent podium finishers rise above one-game wonders.
+              </p>
             )}
           </>
         )}
@@ -374,10 +387,10 @@ export default function HistoryScreen({ onClose }) {
                       className="w-full text-left card-gold p-3 active:bg-navy-700/30 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-gold-200/70 text-xs">
+                        <span className="section-label">
                           {formatDate(game.date)} — {game.roundCount} round{game.roundCount !== 1 ? 's' : ''}
                         </span>
-                        <span className="text-navy-200/50 text-xs">{game.playerCount} players</span>
+                        <span className="text-navy-300 text-[10px] uppercase tracking-[0.12em]">{game.playerCount} players</span>
                       </div>
                       <div className="space-y-1">
                         {results.map((r, ri) => {
@@ -385,20 +398,20 @@ export default function HistoryScreen({ onClose }) {
                           return (
                             <div key={`${r.playerId || r.name}-${ri}`} className="flex items-center justify-between">
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className={`text-xs font-bold w-6 ${ri === 0 ? 'text-gold-200' : 'text-navy-200'}`}>
+                                <span className={`text-xs font-bold w-6 ${ri === 0 ? 'text-gold-text' : 'text-navy-200'}`}>
                                   {medal || `${r.rank}.`}
                                 </span>
-                                <span className={`text-sm truncate ${ri === 0 ? 'text-white font-medium' : 'text-gray-300'}`}>
+                                <span className={`font-display font-semibold text-[15px] truncate ${ri === 0 ? 'text-cream-bright' : 'text-cream'}`}>
                                   {r.name}
                                 </span>
                                 {(r.shamePoints || 0) > 0 && (
-                                  <span className="text-red-400 text-[10px]">💀{r.shamePoints > 1 ? `×${r.shamePoints}` : ''}</span>
+                                  <span className="shame-chip">shame{r.shamePoints > 1 ? ` ×${r.shamePoints}` : ''}</span>
                                 )}
                               </div>
-                              <span className={`text-sm font-semibold tabular-nums ${
-                                r.score > 0 ? 'text-green-400' : r.score < 0 ? 'text-red-400' : 'text-navy-200'
+                              <span className={`font-display font-semibold text-[17px] leading-none tabular-nums ${
+                                r.score > 0 ? 'text-[#6ee7b7]' : r.score < 0 ? 'text-[#fda4af]' : 'text-cream'
                               }`}>
-                                {r.score}
+                                {formatNum(r.score)}
                               </span>
                             </div>
                           );
@@ -417,6 +430,7 @@ export default function HistoryScreen({ onClose }) {
         <PlayerDetailOverlay
           state={playerDetail}
           visiblePlayers={visiblePlayers}
+          podium={podium}
           mergeError={mergeError}
           onClose={() => {
             setPlayerDetail(null);
@@ -487,6 +501,7 @@ export default function HistoryScreen({ onClose }) {
 function PlayerDetailOverlay({
   state,
   visiblePlayers,
+  podium,
   mergeError,
   onClose,
   onStartMerge,
@@ -527,6 +542,7 @@ function PlayerDetailOverlay({
         {state.mode === 'view' && (
           <PlayerViewBody
             player={state.player}
+            podium={podium}
             onStartMerge={onStartMerge}
             onSetPrimary={onSetPrimary}
           />
@@ -560,9 +576,9 @@ function DetailHeader({ title, subtitle, onBack, onClose }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <p className="text-gold-200 text-base font-bold truncate">{title}</p>
+        <p className="font-display font-semibold text-[22px] leading-none text-cream-bright truncate">{title}</p>
         {subtitle && (
-          <p className="text-navy-200 text-xs uppercase tracking-wider mt-0.5">
+          <p className="section-label mt-1.5">
             {subtitle}
           </p>
         )}
@@ -592,18 +608,26 @@ function DetailHeader({ title, subtitle, onBack, onClose }) {
   );
 }
 
-function PlayerViewBody({ player, onStartMerge, onSetPrimary }) {
+function PlayerViewBody({ player, podium, onStartMerge, onSetPrimary }) {
   const gp = player.gamesPlayed || 0;
   const aliases = player.aliases || [];
+  const pod = podium?.[player.id] || { firsts: 0, seconds: 0, thirds: 0 };
+  const rating = ratingForPlayer(player, podium);
   return (
     <>
       <div className="grid grid-cols-3 gap-2 text-center">
+        <Stat label="Rating" value={rating.toFixed(2)} highlight />
         <Stat label="GP" value={gp} />
-        <Stat label="Wins" value={player.wins || 0} />
         <Stat label="Win%" value={gp > 0 ? `${Math.round(((player.wins || 0) / gp) * 100)}%` : '—'} />
-        <Stat label="Total" value={(player.totalScore || 0).toString()} />
-        <Stat label="Best" value={player.bestScore ?? '—'} />
-        <Stat label="Avg" value={gp > 0 ? Math.round((player.totalScore || 0) / gp) : '—'} />
+        <Stat label="Total" value={formatNum(player.totalScore || 0)} />
+        <Stat label="Best" value={player.bestScore != null ? formatNum(player.bestScore) : '—'} />
+        <Stat label="Avg" value={gp > 0 ? formatNum(Math.round((player.totalScore || 0) / gp)) : '—'} />
+      </div>
+      <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-3 py-2 flex items-center justify-center gap-4">
+        <span className="section-label">Podiums</span>
+        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥇 {pod.firsts}</span>
+        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥈 {pod.seconds}</span>
+        <span className="font-display font-semibold text-[17px] text-cream tabular-nums">🥉 {pod.thirds}</span>
       </div>
       <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
         <p className="text-xs uppercase tracking-wider text-navy-200 mb-1">Display name</p>
@@ -731,14 +755,16 @@ function MergeConfirmBody({ alias, canonical, mergeError, isMerging, onConfirm, 
   );
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, highlight }) {
   // Square-ish tiles: a min-height + centered stack keeps them from
   // rendering as wide, stretched-looking bars (most noticeable on the
   // larger iPad/desktop zoom, where the same proportions get scaled up).
   return (
-    <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-2 py-2.5 min-h-[3.25rem] flex flex-col items-center justify-center gap-1">
-      <p className="text-[10px] uppercase tracking-wider text-navy-300 leading-none">{label}</p>
-      <p className="text-base font-bold text-gold-100 tabular-nums leading-none">{value}</p>
+    <div className="rounded-md bg-navy-900/50 border border-gold-700/30 px-2 py-2.5 min-h-[3.25rem] flex flex-col items-center justify-center gap-1.5">
+      <p className="section-label">{label}</p>
+      <p className={`font-display font-semibold text-[19px] tabular-nums leading-none ${
+        highlight ? 'text-gold-text' : 'text-cream'
+      }`}>{value}</p>
     </div>
   );
 }
@@ -806,7 +832,7 @@ function GameDetailOverlay({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-gold-200 text-base font-bold leading-tight">
+            <p className="font-display font-semibold text-[20px] text-cream-bright leading-tight">
               {formatDateLong(game.date)}
             </p>
             <p className="text-navy-200 text-xs mt-0.5">
@@ -831,24 +857,24 @@ function GameDetailOverlay({
         )}
 
         <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
-          <p className="text-xs uppercase tracking-wider text-navy-200 mb-1.5">Final standings</p>
+          <p className="section-label mb-1.5">Final standings</p>
           <div className="space-y-1">
             {sortedResults.map((r, ri) => {
               const medal = ri < 3 ? medalEmojis[ri] : null;
               return (
-                <div key={`${r.playerId || r.name}-${ri}`} className="flex items-center justify-between text-sm">
+                <div key={`${r.playerId || r.name}-${ri}`} className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-xs font-bold w-6 ${ri === 0 ? 'text-gold-200' : 'text-navy-200'}`}>
+                    <span className={`text-xs font-bold w-6 ${ri === 0 ? 'text-gold-text' : 'text-navy-200'}`}>
                       {medal || `${r.rank}.`}
                     </span>
-                    <span className={`truncate ${ri === 0 ? 'text-white font-medium' : 'text-gray-300'}`}>
+                    <span className={`font-display font-semibold text-[15px] truncate ${ri === 0 ? 'text-cream-bright' : 'text-cream'}`}>
                       {r.name}
                     </span>
                   </div>
-                  <span className={`font-semibold tabular-nums ${
-                    r.score > 0 ? 'text-green-400' : r.score < 0 ? 'text-red-400' : 'text-navy-200'
+                  <span className={`font-display font-semibold text-[17px] leading-none tabular-nums ${
+                    r.score > 0 ? 'text-[#6ee7b7]' : r.score < 0 ? 'text-[#fda4af]' : 'text-cream'
                   }`}>
-                    {r.score}
+                    {formatNum(r.score)}
                   </span>
                 </div>
               );
@@ -924,16 +950,16 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
   for (const n of playerOrder) cumulative[n] = 0;
   return (
     <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
-      <p className="text-xs uppercase tracking-wider text-navy-200 mb-1.5">Round-by-round</p>
+      <p className="section-label mb-1.5">Round-by-round</p>
       <div className="overflow-x-auto -mx-0.5">
         <table className="w-full text-[11px] tabular-nums">
           <thead>
             <tr className="text-navy-300">
-              <th className="text-left font-normal pr-1 sticky left-0 bg-navy-900/50 z-10">R</th>
+              <th className="text-left font-normal pr-1 sticky left-0 bg-navy-900/50 z-10 text-[10px] uppercase tracking-[0.12em]">R</th>
               {playerOrder.map((n) => (
                 <th
                   key={n}
-                  className="font-normal px-1 text-right truncate max-w-[60px]"
+                  className="font-display font-semibold text-[12px] text-cream px-1 text-right truncate max-w-[60px]"
                   title={n}
                 >
                   {n.length > 6 ? `${n.slice(0, 5)}…` : n}
@@ -947,8 +973,8 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
                 cumulative[n] = (cumulative[n] || 0) + (r.deltas[n] || 0);
               }
               return (
-                <tr key={r.round} className="border-t border-gold-700/15 align-top">
-                  <td className="pr-1 text-gold-200 sticky left-0 bg-navy-900/50 z-10 py-1">{r.round}</td>
+                <tr key={r.round} className="border-t border-gold-300/10 align-top">
+                  <td className="pr-1 text-gold-text font-display font-medium text-[13px] sticky left-0 bg-navy-900/50 z-10 py-1">{r.round}</td>
                   {playerOrder.map((n) => {
                     const bid = r.bids[n];
                     const won = r.tricks[n] || 0;
@@ -957,15 +983,15 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
                     const hit = bid !== undefined && bid === won;
                     return (
                       <td key={n} className="px-1 text-right py-1 leading-tight">
-                        <div className={`text-[11px] ${hit ? 'text-green-400' : 'text-navy-100'}`}>
+                        <div className={`text-[11px] ${hit ? 'text-[#6ee7b7]' : 'text-navy-100'}`}>
                           {bid !== undefined ? `${won}/${bid}` : '—'}
                         </div>
                         <div className={`text-[10px] ${
-                          delta > 0 ? 'text-green-400' : delta < 0 ? 'text-red-400' : 'text-navy-300'
+                          delta > 0 ? 'text-[#6ee7b7]' : delta < 0 ? 'text-[#fda4af]' : 'text-navy-300'
                         }`}>
-                          {delta > 0 ? '+' : ''}{delta}
+                          {delta > 0 ? `+${delta}` : formatNum(delta)}
                         </div>
-                        <div className="text-[10px] text-gold-200">{total}</div>
+                        <div className="text-[10px] text-gold-text">{formatNum(total)}</div>
                       </td>
                     );
                   })}

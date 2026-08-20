@@ -4,11 +4,21 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 
-// Allow calls from the live GitHub Pages site and local dev
+// Allow calls from the live Firebase Hosting sites (scorekeeper +
+// multiplayer), the legacy GitHub Pages mirror, and local dev.
+// NOTE: when the apps moved from GitHub Pages to *.web.app this list
+// wasn't updated, so production calls were CORS-rejected and users only
+// ever saw the deterministic fallback sentences.
 const ALLOWED_ORIGINS = [
+  'https://wizard-scorekeeper.web.app',
+  'https://wizard-scorekeeper.firebaseapp.com',
+  'https://wizard-multiplayer.web.app',
+  'https://wizard-multiplayer.firebaseapp.com',
   'https://jr-canest.github.io',
   'http://localhost:5180',
   'http://127.0.0.1:5180',
+  'http://localhost:5181',
+  'http://127.0.0.1:5181',
 ];
 
 /**
@@ -103,33 +113,48 @@ export const generateGameSummary = onCall(
       .filter(Boolean)
       .join('\n');
 
-    const prompt = `You're writing a funny recap for a game of Wizard — a trick-taking card game where players bid how many tricks they'll take, score big for hitting it exact, lose points for missing. 60 cards: standard deck plus 4 Wizards (auto-win a trick) and 4 Jesters (auto-lose). The dealer bids last. Canadian rules (optional) force the dealer's bid to break the total.
+    // A different narrator voice each game keeps recaps from converging
+    // on the same shape. Picked here (not by the model) so it's truly
+    // random game to game.
+    const VOICES = [
+      'a smug tavern bard who has seen a thousand card nights and is only mildly impressed',
+      'an over-caffeinated arena commentator calling the final seconds',
+      'a dry, unimpressed wizard-school examiner filling in the class report',
+      'a royal court herald making an official (slightly petty) proclamation',
+      'a nature-documentary narrator observing wizards in their natural habitat',
+      'a fortune teller reviewing which of tonight\'s prophecies actually came true',
+      'a sports-radio host doing the morning-after post-game breakdown',
+      'a wizened innkeeper recounting the night to a regular who missed it',
+      'a quill-scratching royal historian recording the match for the archives',
+      'a gossip columnist for the Wizard\'s Weekly society pages',
+    ];
+    const voice = VOICES[Math.floor(Math.random() * VOICES.length)];
+
+    const prompt = `Write the post-game recap for a game of Wizard — a trick-taking card game where players bid how many tricks they'll take, score big for hitting the bid exactly, lose points for missing. 60 cards: standard deck plus 4 Wizards (auto-win a trick) and 4 Jesters (auto-lose). The dealer bids last. Canadian rules (optional) force the dealer's bid to break the total.
 
 ${context}
 
-Write a recap based ONLY on what actually happened in THIS game (the stats above). The story might be a dominance blowout, a close nail-biter, a comeback from behind, a chaotic mess with many lead changes, or a meltdown where everyone went negative. Use the real numbers from the stats above — do not invent stats, shame points, or drama that isn't in the data. Lean on the most specific, juicy stat you have (a +50 round, a 4-miss streak, a Wizard at the wrong moment) instead of generic adjectives.
+Write in the voice of ${voice}. Never name or announce the persona ("as a bard…") — just let it color the word choice and attitude.
 
-CRITICAL: Only mention a player's shame points if the stats above explicitly list them as having shame this game. If the stats say "0 shame points this game" for a player, that player was NOT shamed — do not imply otherwise.
+Make it genuinely funny and a little merciless: roast the biggest bust or the bottom of the table by name, give the winner at most a backhanded compliment, and let the actual numbers land the punchlines. This recap is for the table — they know the game, so be knowing: read the story in the stats (a blowout, a nail-biter, a comeback, a chaotic mess, a collective meltdown) and commit to that story. Lean on the single juiciest specific stat above (a +50 round, a serial overbidder, a razor-thin margin) instead of generic adjectives.
 
-Mix the actual Wizard card game lingo (bids, tricks, trump, Wizards, Jesters, overbid, underbid, busted, nailed) with fun wizard and magic flavor (spells, prophecies, crowns, enchantments, spellbound, wands, potions, wizard's hat, wizard towers, fireworks). Both should feel natural together.
+Use real Wizard lingo naturally (bids, tricks, trump, Wizards, Jesters, overbid, busted, nailed it) with light magic flavor. Keep the fantasy friendly — Gandalf / Wizard of Oz energy, nothing dark: no curses, hexes, death, doom, or dark magic. "Misfire", "fumble", "spell gone wrong" are the vibe for failure.
 
-TONE / CONTENT (important): keep it friendly-fantasy — Gandalf / Harry Potter / Wizard of Oz vibes. AVOID anything demonic, satanic, occult, dark arts, evil, cursed, hexed, death, blood, sacrifice, shadow realm, underworld, grim, tormented, damned, etc. No "dealer's curse", no "cursed", no skulls in the text, no "dark magic". Keep it playful and wholesome — this is a game night with friends, not a horror movie. "Bad luck", "off night", "misfire", "fumble", "spell gone wrong" are fine. If you reach for a word and it feels dark, pick something cheerful instead.
-
-IMPORTANT: mention EVERY player by name at least once — no player should be left out of the recap. Even the middle-of-the-pack ones get a callout, a tease, or a one-word shoutout.
-
-FORMATTING RULES (strict):
-- Wrap each player name's first appearance in HTML <b>Name</b> tags. Example: <b>Alice</b>. NEVER use markdown bold like **Alice** — it will render as literal asterisks.
-- Output ONLY the recap text. No headers, no titles, no markdown (# or ## or ---), no bullet points, no quotes around the whole thing, no preamble like "Here's the recap:".
-- One flowing paragraph of 3-4 sentences, 60-95 words. Use the extra room to call out a specific moment or stat from the data above (e.g. a big single-round haul, a bust, an exact-bid streak) rather than padding with generic flavor.
-- Never use "they" or "their" — say names directly.
-
-Style: funny, a little roast-y, specific to the game.`;
+HARD RULES:
+- Use ONLY the stats above. Never invent numbers, streaks, or drama not in the data.
+- Shame points: only mention shame for players explicitly listed as shamed above. Zero shame = never imply it.
+- Mention EVERY player by name at least once — mid-table players get at least a quick jab or shoutout.
+- Wrap each player name's first appearance in HTML <b>Name</b> tags, e.g. <b>Alice</b>. NEVER markdown bold (**Alice** renders as literal asterisks).
+- Output ONLY the recap: no title, no markdown, no quotes around it, no preamble.
+- One paragraph, 2-4 sentences, 50-85 words. Shorter and sharper beats longer.
+- Never use "they" or "their" — names only.
+- Do not open with "In a…", "What a…", "Tonight…", or a restatement that a game of Wizard was played — start mid-story or with the most surprising number.`;
 
     let text;
     try {
       const message = await client.messages.create({
-        model: 'claude-haiku-4-5',
-        max_tokens: 320,
+        model: 'claude-sonnet-5',
+        max_tokens: 300,
         temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });

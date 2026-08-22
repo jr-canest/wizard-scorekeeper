@@ -349,6 +349,15 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
               .summary-text {
                 animation: summary-fade-in 0.5s ease-out;
               }
+              /* Player names (<b> tags from the AI) switch to sans + gold so
+                 they pop out of the serif prose instead of blending in. */
+              .summary-text b {
+                font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+                font-weight: 600;
+                font-size: 0.82em;
+                color: #e2c579;
+                letter-spacing: 0.01em;
+              }
               .summary-dot {
                 animation: summary-loading-dots 1.4s ease-in-out infinite;
                 display: inline-block;

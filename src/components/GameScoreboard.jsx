@@ -197,7 +197,17 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
   const [aiSummary, setAiSummary] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiTimedOut, setAiTimedOut] = useState(false);
   const aiFetchedRef = useRef(false);
+
+  // Watchdog: if the AI call hasn't resolved after 15s, commit to the
+  // fallback so the card never shimmers forever. Once timed out, a late
+  // AI response is ignored — the table only ever sees ONE commentary.
+  useEffect(() => {
+    if (!aiLoading) return;
+    const t = setTimeout(() => setAiTimedOut(true), 15000);
+    return () => clearTimeout(t);
+  }, [aiLoading]);
 
   // Fetch AI summary once when game ends (production only)
   useEffect(() => {
@@ -243,7 +253,14 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isGameOver]);
 
-  const summary = aiSummary || fallbackSummary;
+  // Single-commentary contract: while the AI is working show ONLY the
+  // "Analyzing the game" state; then show exactly one text — the AI recap,
+  // or the deterministic fallback if the call failed/timed out. The
+  // fallback never flashes first and then gets swapped.
+  const stillAnalyzing = aiLoading && !aiTimedOut;
+  const summary = aiTimedOut
+    ? fallbackSummary
+    : (aiSummary || (stillAnalyzing ? null : fallbackSummary));
 
   return (
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}
@@ -290,33 +307,6 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           </div>
         </div>
 
-        {/* Game summary */}
-        {isGameOver && summary && (
-          <div className={`card-gold px-4 py-3.5 mb-4 text-center relative ${aiLoading ? 'summary-shimmer' : ''}`}>
-            <style>{`
-              @keyframes summary-fade-in {
-                from { opacity: 0; transform: translateY(4px); }
-                to { opacity: 1; transform: translateY(0); }
-              }
-              @keyframes summary-shimmer-pulse {
-                0%, 100% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.0); }
-                50% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.45); }
-              }
-              .summary-shimmer {
-                animation: summary-shimmer-pulse 1.4s ease-in-out infinite;
-              }
-              .summary-text {
-                animation: summary-fade-in 0.5s ease-out;
-              }
-            `}</style>
-            <p
-              key={summary}
-              className="summary-text font-display text-cream text-[17px] leading-[1.6]"
-              dangerouslySetInnerHTML={{ __html: summary }}
-            />
-          </div>
-        )}
-
         {/* Bar Chart Race */}
         {isGameOver && showReplay && completedRounds.length > 1 && (
           <BarChartRace
@@ -334,6 +324,53 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           >
             ▶ Watch Replay
           </button>
+        )}
+
+        {/* Game summary — below the chart so the long recap never pushes it down */}
+        {isGameOver && (stillAnalyzing || summary) && (
+          <div className={`card-gold px-4 py-3.5 mb-4 text-center relative ${stillAnalyzing ? 'summary-shimmer' : ''}`}>
+            <style>{`
+              @keyframes summary-fade-in {
+                from { opacity: 0; transform: translateY(4px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              @keyframes summary-shimmer-pulse {
+                0%, 100% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.0); }
+                50% { box-shadow: inset 0 0 0 1px rgba(254, 205, 70, 0.45); }
+              }
+              @keyframes summary-loading-dots {
+                0%, 20% { opacity: 0.3; }
+                50% { opacity: 1; }
+                100% { opacity: 0.3; }
+              }
+              .summary-shimmer {
+                animation: summary-shimmer-pulse 1.4s ease-in-out infinite;
+              }
+              .summary-text {
+                animation: summary-fade-in 0.5s ease-out;
+              }
+              .summary-dot {
+                animation: summary-loading-dots 1.4s ease-in-out infinite;
+                display: inline-block;
+              }
+              .summary-dot:nth-child(2) { animation-delay: 0.2s; }
+              .summary-dot:nth-child(3) { animation-delay: 0.4s; }
+            `}</style>
+            {stillAnalyzing ? (
+              <p className="text-gold-100/70 text-sm italic">
+                Analyzing the game
+                <span className="summary-dot">.</span>
+                <span className="summary-dot">.</span>
+                <span className="summary-dot">.</span>
+              </p>
+            ) : (
+              <p
+                key={summary}
+                className="summary-text font-display text-cream text-[17px] leading-[1.6]"
+                dangerouslySetInnerHTML={{ __html: summary }}
+              />
+            )}
+          </div>
         )}
 
         {/* Standings */}

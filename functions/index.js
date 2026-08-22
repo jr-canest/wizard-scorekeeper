@@ -154,17 +154,24 @@ HARD RULES:
     try {
       const message = await client.messages.create({
         model: 'claude-sonnet-5',
-        max_tokens: 300,
+        // Sonnet 5's adaptive thinking tokens count against max_tokens.
+        // At 300 the thinking ate the budget and the text came back
+        // truncated or empty ("Empty response from model" 500s) — keep
+        // plenty of headroom above the ~120-word recap.
+        max_tokens: 1500,
         temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });
+      if (message.stop_reason === 'max_tokens') {
+        console.warn('generateGameSummary: hit max_tokens, recap may be truncated');
+      }
       text = message.content
         .filter((block) => block.type === 'text')
         .map((block) => block.text)
         .join('')
         .trim();
     } catch (err) {
-      console.error('Anthropic API error:', err);
+      console.error('Anthropic API error:', err?.message || err, err?.status ?? '');
       throw new HttpsError('internal', 'Failed to generate summary');
     }
 

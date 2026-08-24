@@ -46,6 +46,7 @@ export default function App() {
     endGame,
     keepPlaying,
     newGame,
+    recordSavedGame,
   } = useGameState();
 
   const [showScoreboard, setShowScoreboard] = useState(false);
@@ -182,6 +183,8 @@ export default function App() {
           shamePoints={gameState.shamePoints}
           settings={gameState.settings}
           isGameOver
+          savedGameId={gameState.savedGameId}
+          onGameSaved={recordSavedGame}
           onKeepPlaying={keepPlaying}
           onNewGame={newGame}
           onShowHistory={() => setShowHistory(true)}

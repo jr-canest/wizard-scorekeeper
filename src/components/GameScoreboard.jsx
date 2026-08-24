@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
-import { saveGameResult, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
+import { saveGameResult, deleteHistoryGame, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
 import { isDemoMode } from '../utils/demoScenarios';
 import { isTestMode } from '../utils/testMode';
 import BarChartRace from './BarChartRace';
@@ -87,7 +87,7 @@ function Sparkles() {
   );
 }
 
-export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, onKeepPlaying, onNewGame, onShowHistory }) {
+export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, savedGameId, onGameSaved, onKeepPlaying, onNewGame, onShowHistory }) {
   // Memoize derived arrays so downstream components (BarChartRace is 60fps)
   // don't bust their useMemo caches on every parent render.
   const sortedPlayers = useMemo(
@@ -140,6 +140,18 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
           .then((res) => {
             gameIdRef.current = res?.gameId ?? null;
             setSaveStatus('saved');
+            onGameSaved?.(res?.gameId ?? null);
+            // This game was already saved once (ended, then reopened via
+            // Keep Playing / edit round, then ended again). The fresh doc
+            // above replaces the stale one — deleting it also rolls its
+            // aggregate contribution back out of the player stats. New
+            // save first, so a failure here leaves a duplicate rather
+            // than losing the game.
+            if (savedGameId && res?.gameId && savedGameId !== res.gameId) {
+              deleteHistoryGame(savedGameId).catch((err) =>
+                console.warn('Could not remove superseded game doc:', err),
+              );
+            }
           })
           .catch((err) => {
             console.error('Failed to save game:', err);

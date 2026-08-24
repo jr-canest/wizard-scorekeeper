@@ -1,7 +1,8 @@
 import { SUITS } from '../utils/constants';
 
-// Ornament rule + centred metadata row shown under the sticky title
-// block: `Trump ♥ Hearts · Dealer Marcus · 3 cards`. The trump segment
+// Centred metadata row shown under the sticky title block (which owns
+// the ◆ ornament rule): `Trump ♥ Hearts · Dealer Marcus · 3 cards`. The
+// trump segment
 // is tappable during bidding/tricks so trump can be set or changed when
 // a Wizard or Jester is flipped mid-round.
 export default function RoundMeta({ trumpSuit, dealerName, cardsDealt, onSelectTrump }) {
@@ -21,11 +22,8 @@ export default function RoundMeta({ trumpSuit, dealerName, cardsDealt, onSelectT
   );
 
   return (
-    <div className="pt-3.5 pb-2">
-      <div className="ornament">
-        <span className="diamond" />
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-3.5 text-xs font-medium text-navy-200">
+    <div className="pt-1 pb-2">
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs font-medium text-navy-200">
         {onSelectTrump ? (
           <button onClick={onSelectTrump} className="active:opacity-70">
             Trump {trumpValue}

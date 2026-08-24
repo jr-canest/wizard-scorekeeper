@@ -41,16 +41,26 @@ export function getUIZoom() {
  */
 export function useUIScale() {
   useEffect(() => {
-    function update() {
+    let lastWidth = 0;
+    function update(force) {
+      // iOS Safari fires resize while scrolling as its toolbar collapses
+      // and expands — only the height changes. Recomputing the zoom then
+      // reflows the whole page mid-scroll (text visibly re-wraps), so
+      // height-only resizes are ignored; real size changes (rotation,
+      // window resize) always move the width too.
+      if (!force && window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
       const s = computeScale();
       document.body.style.setProperty('--ui-zoom', String(s));
     }
-    update();
-    window.addEventListener('resize', update);
-    window.addEventListener('orientationchange', update);
+    update(true);
+    const onResize = () => update(false);
+    const onOrientation = () => update(true);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onOrientation);
     return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', update);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onOrientation);
       document.body.style.removeProperty('--ui-zoom');
     };
   }, []);

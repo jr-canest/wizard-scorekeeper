@@ -88,7 +88,9 @@ export const generateGameSummary = onCall(
       `Winning margin: ${margin} points.`,
       shameSummary,
       data.leadChanges != null ? `Lead changes during game: ${data.leadChanges}.` : null,
-      data.comebackRank ? `Winner was in ${nth(data.comebackRank)} place at their lowest point.` : null,
+      data.comebackRank
+        ? `Winner's lowest position during the game: ${nth(data.comebackRank)} of ${players.length}${data.comebackRank >= players.length ? ' (dead last)' : ''}.`
+        : null,
       data.negativeCount ? `${data.negativeCount} players finished with negative scores.` : null,
       data.canadianRules ? `Canadian rules were on (dealer restriction).` : null,
       bestRound && bestRound.delta >= 20
@@ -148,6 +150,7 @@ HARD RULES:
 - Output ONLY the recap: no title, no markdown, no quotes around it, no preamble.
 - One paragraph, 2-4 sentences, 50-85 words. Shorter and sharper beats longer.
 - Never use "they" or "their" — names only.
+- Describe positions accurately: with ${players.length} players, only ${nth(players.length)} place is "last" — never call any other position "last", "dead last", or "the bottom".
 - Do not open with "In a…", "What a…", "Tonight…", or a restatement that a game of Wizard was played — start mid-story or with the most surprising number.`;
 
     let text;

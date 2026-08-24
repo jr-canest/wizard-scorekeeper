@@ -295,6 +295,18 @@ export function useGameState() {
     });
   }, []);
 
+  // Remember which Firestore game doc this game was saved to, so ending
+  // the same game a second time (Keep Playing / edit round, then End
+  // Game again) replaces that doc instead of adding a duplicate.
+  const recordSavedGame = useCallback((gameId) => {
+    setGameState(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, savedGameId: gameId || null };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
   const keepPlaying = useCallback(() => {
     setGameState(prev => {
       const next = { ...prev, currentPhase: PHASES.SCORED, isLastRound: false };
@@ -337,5 +349,6 @@ export function useGameState() {
     endGame,
     keepPlaying,
     newGame,
+    recordSavedGame,
   };
 }

@@ -26,10 +26,24 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
   const [suggestions, setSuggestions] = useState([]);
   const [activeInputIndex, setActiveInputIndex] = useState(null);
   const debounceRef = useRef(null);
+  // Refs are the authority for "which input owns the dropdown" and
+  // "which fetch is current" — the blur timer and async searches used
+  // to check stale closure state, which made moving focus from one
+  // player field to the next silently kill the new field's dropdown.
+  const activeIndexRef = useRef(null);
+  const searchSeqRef = useRef(0);
+  const blurTimerRef = useRef(null);
 
   const handleNameSearch = useCallback((index, value) => {
+    // Taking (or keeping) focus cancels any pending close from a blur.
+    if (blurTimerRef.current) {
+      clearTimeout(blurTimerRef.current);
+      blurTimerRef.current = null;
+    }
+    activeIndexRef.current = index;
     setActiveInputIndex(index);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    const seq = ++searchSeqRef.current;
     if (!value || value.trim().length < 1) {
       setSuggestions([]);
       return;
@@ -37,15 +51,32 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
     debounceRef.current = setTimeout(async () => {
       try {
         const results = await searchPlayers(value, 5);
+        // A newer keystroke/focus/blur supersedes this fetch — drop it
+        // instead of clobbering the fresher list (or a closed dropdown).
+        if (seq !== searchSeqRef.current || activeIndexRef.current !== index) return;
         // Filter out names already used by other players
         const usedNames = new Set(players.filter((_, i) => i !== index).map(p => p.name.trim().toLowerCase()));
         const filtered = results.filter(r => !usedNames.has(r.nameLower));
         setSuggestions(filtered);
       } catch {
-        setSuggestions([]);
+        /* network hiccup — leave whatever is showing */
       }
     }, 200);
   }, [players]);
+
+  const closeSuggestions = useCallback((index) => {
+    // Deferred so a tap landing on a suggestion wins; only closes if
+    // this input still owns the dropdown when the timer fires (focusing
+    // another field re-arms everything via handleNameSearch).
+    blurTimerRef.current = setTimeout(() => {
+      if (activeIndexRef.current === index) {
+        activeIndexRef.current = null;
+        searchSeqRef.current++;
+        setSuggestions([]);
+        setActiveInputIndex(null);
+      }
+    }, 200);
+  }, []);
 
   const selectSuggestion = useCallback((index, name) => {
     setPlayers(prev => {
@@ -53,6 +84,9 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
       next[index] = { ...next[index], name };
       return next;
     });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    searchSeqRef.current++;
+    activeIndexRef.current = null;
     setSuggestions([]);
     setActiveInputIndex(null);
   }, []);
@@ -198,12 +232,7 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                     handleNameSearch(i, e.target.value);
                   }}
                   onFocus={() => handleNameSearch(i, player.name)}
-                  onBlur={() => setTimeout(() => {
-                    if (activeInputIndex === i) {
-                      setSuggestions([]);
-                      setActiveInputIndex(null);
-                    }
-                  }, 150)}
+                  onBlur={() => closeSuggestions(i)}
                   placeholder={`Player ${i + 1}`}
                   className="w-full h-11 bg-[rgba(20,26,44,.8)] border border-gold-300/25 rounded-lg px-3 text-cream placeholder-navy-300 focus:border-gold-300 focus:outline-none select-text"
                   maxLength={20}
@@ -214,7 +243,16 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                     {suggestions.map(s => (
                       <button
                         key={s.id}
-                        onMouseDown={() => selectSuggestion(i, s.name)}
+                        // pointerdown fires the moment the finger lands —
+                        // before the input's blur — and preventDefault stops
+                        // the focus change, so the close-on-blur timer can't
+                        // unmount the row mid-tap (onMouseDown arrived too
+                        // late on iOS, or never, if the finger moved a hair).
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          selectSuggestion(i, s.name);
+                        }}
+                        onClick={() => selectSuggestion(i, s.name)}
                         className="w-full px-3 py-2 text-left text-sm text-cream hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
                       >
                         <span className="font-display font-semibold text-[15px]">{s.name}</span>

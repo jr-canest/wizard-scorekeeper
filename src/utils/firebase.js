@@ -178,14 +178,36 @@ export async function findOrCreatePlayer(name) {
  * older data) — fine at this scale (~tens of players). Merged player
  * docs are hidden so autocomplete only suggests the canonical name.
  */
+// Autocomplete calls searchPlayers on every keystroke and it scans the
+// whole collection anyway — cache the snapshot briefly so only the first
+// keystroke pays the network round-trip (on a slow connection that
+// round-trip made the dropdown feel like it never showed up). The
+// promise itself is cached so parallel keystrokes share one fetch.
+let playersSnapshotCache = null; // { at, promise }
+const PLAYERS_CACHE_TTL_MS = 60_000;
+
+function getPlayersForSearch() {
+  const now = Date.now();
+  if (playersSnapshotCache && now - playersSnapshotCache.at < PLAYERS_CACHE_TTL_MS) {
+    return playersSnapshotCache.promise;
+  }
+  const promise = getDocs(collection(db, 'players'))
+    .then((snapshot) => snapshot.docs.map((d) => ({ id: d.id, ...d.data() })))
+    .catch((err) => {
+      playersSnapshotCache = null; // don't cache failures
+      throw err;
+    });
+  playersSnapshotCache = { at: now, promise };
+  return promise;
+}
+
 export async function searchPlayers(prefix, maxResults = 10) {
   if (!prefix || prefix.trim().length === 0) return [];
   const lower = prefix.trim().toLowerCase();
 
-  const snapshot = await getDocs(collection(db, 'players'));
+  const allPlayers = await getPlayersForSearch();
   const matches = [];
-  for (const d of snapshot.docs) {
-    const p = { id: d.id, ...d.data() };
+  for (const p of allPlayers) {
     if (p.mergedInto) continue;
     const nameHit = typeof p.nameLower === 'string' && p.nameLower.startsWith(lower);
     const aliasHit = Array.isArray(p.aliases) && p.aliases.some(a => typeof a === 'string' && a.toLowerCase().startsWith(lower));

@@ -255,7 +255,12 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                         onClick={() => selectSuggestion(i, s.name)}
                         className="w-full px-3 py-2 text-left text-sm text-cream hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
                       >
-                        <span className="font-display font-semibold text-[15px]">{s.name}</span>
+                        <span className="font-display font-semibold text-[15px]">
+                          {s.name}
+                          {s.matchedAlias && (
+                            <span className="text-navy-200 font-medium"> ({s.matchedAlias})</span>
+                          )}
+                        </span>
                         <span className="text-navy-300 text-xs">{s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''}</span>
                       </button>
                     ))}

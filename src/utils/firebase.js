@@ -210,8 +210,16 @@ export async function searchPlayers(prefix, maxResults = 10) {
   for (const p of allPlayers) {
     if (p.mergedInto) continue;
     const nameHit = typeof p.nameLower === 'string' && p.nameLower.startsWith(lower);
-    const aliasHit = Array.isArray(p.aliases) && p.aliases.some(a => typeof a === 'string' && a.toLowerCase().startsWith(lower));
-    if (nameHit || aliasHit) matches.push({ ...p, _nameHit: nameHit });
+    const aliasHit = Array.isArray(p.aliases)
+      ? p.aliases.find(a => typeof a === 'string' && a.toLowerCase().startsWith(lower))
+      : undefined;
+    if (nameHit || aliasHit) {
+      // matchedAlias tells the dropdown WHY this player matched when the
+      // typed prefix hit an alias rather than the display name — so
+      // typing "Cana" can render `James (Canada)` instead of a
+      // seemingly unrelated "James".
+      matches.push({ ...p, _nameHit: nameHit, matchedAlias: !nameHit && aliasHit ? aliasHit : null });
+    }
   }
   matches.sort((a, b) => {
     if (a._nameHit !== b._nameHit) return a._nameHit ? -1 : 1;

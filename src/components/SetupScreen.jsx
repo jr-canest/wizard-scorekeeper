@@ -54,9 +54,12 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
         // A newer keystroke/focus/blur supersedes this fetch — drop it
         // instead of clobbering the fresher list (or a closed dropdown).
         if (seq !== searchSeqRef.current || activeIndexRef.current !== index) return;
-        // Filter out names already used by other players
+        // Filter out players already at the table — by ANY of their
+        // names, so "Canada" in one slot also hides "James" here.
         const usedNames = new Set(players.filter((_, i) => i !== index).map(p => p.name.trim().toLowerCase()));
-        const filtered = results.filter(r => !usedNames.has(r.nameLower));
+        const filtered = results.filter(r =>
+          ![r.matchedName, ...r.otherNames].some(n => usedNames.has(n.toLowerCase()))
+        );
         setSuggestions(filtered);
       } catch {
         /* network hiccup — leave whatever is showing */
@@ -250,15 +253,15 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
                         // late on iOS, or never, if the finger moved a hair).
                         onPointerDown={(e) => {
                           e.preventDefault();
-                          selectSuggestion(i, s.name);
+                          selectSuggestion(i, s.matchedName);
                         }}
-                        onClick={() => selectSuggestion(i, s.name)}
+                        onClick={() => selectSuggestion(i, s.matchedName)}
                         className="w-full px-3 py-2 text-left text-sm text-cream hover:bg-navy-700/60 active:bg-navy-600/60 flex items-center justify-between"
                       >
                         <span className="font-display font-semibold text-[15px]">
-                          {s.name}
-                          {s.matchedAlias && (
-                            <span className="text-navy-200 font-medium"> ({s.matchedAlias})</span>
+                          {s.matchedName}
+                          {s.otherNames.length > 0 && (
+                            <span className="text-navy-200 font-medium"> ({s.otherNames.join(', ')})</span>
                           )}
                         </span>
                         <span className="text-navy-300 text-xs">{s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''}</span>

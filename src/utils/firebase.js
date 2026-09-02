@@ -214,11 +214,18 @@ export async function searchPlayers(prefix, maxResults = 10) {
       ? p.aliases.find(a => typeof a === 'string' && a.toLowerCase().startsWith(lower))
       : undefined;
     if (nameHit || aliasHit) {
-      // matchedAlias tells the dropdown WHY this player matched when the
-      // typed prefix hit an alias rather than the display name — so
-      // typing "Cana" can render `James (Canada)` instead of a
-      // seemingly unrelated "James".
-      matches.push({ ...p, _nameHit: nameHit, matchedAlias: !nameHit && aliasHit ? aliasHit : null });
+      // The name the typer is reaching for is the one they should see
+      // and get: typing "Cana" renders `Canada (James)` and fills
+      // "Canada"; typing "Jam" renders `James (Canada)` and fills
+      // "James". findOrCreatePlayer resolves aliases, so either label
+      // credits the same player doc. `otherNames` = every other name
+      // on the doc, for the parenthetical.
+      const aliases = Array.isArray(p.aliases) ? p.aliases.filter((a) => typeof a === 'string' && a.trim()) : [];
+      const matchedName = nameHit ? p.name : aliasHit;
+      const otherNames = [p.name, ...aliases].filter(
+        (n) => n && n.toLowerCase() !== matchedName.toLowerCase(),
+      );
+      matches.push({ ...p, _nameHit: nameHit, matchedName, otherNames });
     }
   }
   matches.sort((a, b) => {

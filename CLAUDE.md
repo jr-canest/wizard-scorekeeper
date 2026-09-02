@@ -165,7 +165,7 @@ wizard-scorekeeper/
 - **Scoreboard button** — gold outline in top right header, opens full-screen overlay
 - **Pre-round layout** — Start Round (gold), Trump + Last Round toggle (same row), Change Dealer + Add Player (bordered secondary row), End Game (red-outline button)
 - **Edit Round** — Back button on round results keeps existing trick values for adjustment (non-destructive)
-- **Player name autocomplete** — setup screen queries Firebase for matching player names as you type, shows dropdown with games played count
+- **Player name autocomplete** — setup screen queries Firebase for matching player names AND aliases as you type, shows dropdown with games played count. The name you typed toward is the primary label and what gets filled; every other name on that player doc shows in parentheses — typing "Cana" → `Canada (James)` fills "Canada", typing "Jam" → `James (Canada)` fills "James". Either way `findOrCreatePlayer` resolves to the same doc, so stats credit the canonical player while the table/game record shows the chosen name. A player already seated under any of their names is hidden from the other slots
 - Suit colors: ♠ light gray, ♥ red, ♦ blue, ♣ green
 
 ---

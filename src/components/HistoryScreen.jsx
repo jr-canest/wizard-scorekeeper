@@ -28,8 +28,11 @@ const SORT_COLUMNS = [
 // Applying the same template to both eliminates any header/row drift
 // — a column-width change here updates both at once.
 //   rank | name (truncating) | Rtg | Win% | W | GP | Avg | Best
+// Numeric columns are sized to their widest VALUE, not the header: the
+// sort arrow hangs outside the label (see the header button) so it never
+// widens a column, and the name column keeps the leftover.
 const STATS_GRID =
-  'grid grid-cols-[20px_minmax(0,1fr)_44px_42px_24px_26px_36px_38px] items-center';
+  'grid grid-cols-[20px_minmax(0,1fr)_40px_40px_22px_24px_32px_34px] items-center';
 
 // True minus sign (U+2212) for negatives, per the 1b kit
 function formatNum(n) {
@@ -305,7 +308,7 @@ export default function HistoryScreen({ onClose }) {
             ) : (
               <div className="card-gold overflow-hidden">
                 <div
-                  className={`${STATS_GRID} px-2.5 py-2 border-b border-gold-300/20 text-navy-300 text-[10px] font-semibold uppercase tracking-[0.12em]`}
+                  className={`${STATS_GRID} px-2.5 pt-2 pb-[15px] border-b border-gold-300/20 text-navy-300 text-[10px] font-semibold uppercase tracking-[0.12em]`}
                 >
                   <span />
                   <span>Player</span>
@@ -317,7 +320,17 @@ export default function HistoryScreen({ onClose }) {
                         col.key === 'bestScore' ? 'text-right' : 'text-center'
                       } ${sortKey === col.key ? 'text-gold-text' : ''}`}
                     >
-                      {col.label}{sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
+                      {/* Sort arrow sits centred UNDER the active label
+                          (header has extra bottom padding for it) so it
+                          never widens a column or crowds a neighbour. */}
+                      <span className="relative whitespace-nowrap">
+                        {col.label}
+                        {sortKey === col.key && (
+                          <span className="absolute left-1/2 -translate-x-1/2 top-[12px] text-[9px] leading-none">
+                            {sortAsc ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -344,23 +357,28 @@ export default function HistoryScreen({ onClose }) {
                         {medal || `${i + 1}.`}
                       </span>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="font-display font-semibold text-[15px] text-cream-bright truncate min-w-0">
-                            {player.name}
-                          </span>
-                          {hasAliases && (
-                            <span
-                              title={`Also: ${player.aliases.join(', ')}`}
-                              className="shrink-0 text-[9px] leading-none px-1 py-0.5 rounded-full bg-navy-700/80 border border-gold-700/40 text-gold-200 font-normal tabular-nums"
-                            >
-                              ⓘ {player.aliases.length}
-                            </span>
-                          )}
+                        {/* Name gets the whole column; chips (shame, alias
+                            count) share one sub-line so a badge never
+                            squeezes the name into an ellipsis. */}
+                        <div className="font-display font-semibold text-[15px] text-cream-bright truncate">
+                          {player.name}
                         </div>
-                        {(player.totalShamePoints || 0) > 0 && (
-                          <span className="shame-chip mt-0.5 inline-block whitespace-nowrap">
-                            shame{player.totalShamePoints > 1 ? ` ×${player.totalShamePoints}` : ''}
-                          </span>
+                        {((player.totalShamePoints || 0) > 0 || hasAliases) && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {(player.totalShamePoints || 0) > 0 && (
+                              <span className="shame-chip whitespace-nowrap">
+                                shame{player.totalShamePoints > 1 ? ` ×${player.totalShamePoints}` : ''}
+                              </span>
+                            )}
+                            {hasAliases && (
+                              <span
+                                title={`Also: ${player.aliases.join(', ')}`}
+                                className="shrink-0 text-[9px] leading-none px-1 py-0.5 rounded-full bg-navy-700/80 border border-gold-700/40 text-gold-200 font-normal tabular-nums"
+                              >
+                                ⓘ {player.aliases.length}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                       <span className="text-center font-bold text-[13px] text-gold-text tabular-nums">

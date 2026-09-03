@@ -1,4 +1,35 @@
-export default function RoundScoreboard({ players, round, allRounds, totalScores, shamePoints, isLastRound, dealerName, onNextRound, onEndGame, onEditRound }) {
+import { SUITS } from '../utils/constants';
+import LastRoundToggle from './LastRoundToggle';
+
+// Round results + next-round setup on ONE screen (merged the old
+// "Scored" and "Pre-round" screens, 2026-09-02). Top to bottom:
+//   1. title block for the round just scored
+//   2. results panel (bid / won / total + delta), sorted by total
+//   3. "Next up" panel: next round number, cards, dealer, Start round,
+//      trump / last-round toggle, seating + add player
+//   4. Edit round · End game
+//   5. every-round running-total table
+// When the scored round was declared the last one, the Next-up panel is
+// replaced by an End-game panel.
+export default function RoundScoreboard({
+  players,
+  round,
+  allRounds,
+  totalScores,
+  shamePoints,
+  isLastRound,
+  dealerName,
+  next,
+  onStartNextRound,
+  onSelectTrump,
+  onDeclareNextLastRound,
+  onUndeclareNextLastRound,
+  onChangeDealer,
+  onSeating,
+  onAddPlayer,
+  onEndGame,
+  onEditRound,
+}) {
   // Sort by total score descending for results
   const activePlayers = players
     .filter(p => p.id in round.scores)
@@ -34,6 +65,15 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
     const maxScore = Math.max(...scores.map(([, s]) => s));
     return scores.filter(([, s]) => s === maxScore).map(([id]) => id);
   }
+
+  // Next-round trump button label (mirrors the pre-round screen)
+  const nextSuit = next?.trumpSuit && next.trumpSuit !== 'none' ? SUITS[next.trumpSuit] : null;
+  const nextHasTrump = next?.trumpSuit !== null && next?.trumpSuit !== undefined;
+  const trumpLabel = !nextHasTrump
+    ? 'Select Trump'
+    : nextSuit
+      ? `Trump: ${nextSuit.symbol} ${nextSuit.name}`
+      : 'Trump: No Trump';
 
   return (
     <div className="mb-4 phase-enter">
@@ -103,9 +143,106 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
         })}
       </div>
 
+      {isLastRound ? (
+        /* The round just scored was declared the last one. */
+        <div className="card-gold p-3.5 mb-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="section-label">Last round played</span>
+            <span className="text-[11px] text-navy-300">{completedRounds.length} rounds</span>
+          </div>
+          <button onClick={onEndGame} className="btn-gold w-full h-12 text-base">
+            End game · final scores
+          </button>
+          <button onClick={onEditRound} className="btn-secondary w-full h-10 text-sm">
+            Edit round {round.roundNumber}
+          </button>
+        </div>
+      ) : (
+        /* Next-round setup — what the pre-round screen used to hold. */
+        <div className="card-gold p-3.5 mb-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="section-label">Next up</span>
+            <span className="text-[11px] text-navy-300">
+              {next.roundsLeft > 0
+                ? `${next.roundsLeft} round${next.roundsLeft !== 1 ? 's' : ''} left`
+                : 'final ascending round'}
+            </span>
+          </div>
+
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-display font-semibold text-[26px] leading-none tracking-[0.01em] text-cream-bright">
+                Round {next.roundNumber}
+              </div>
+              <div className="mt-1.5 text-xs font-medium text-navy-200">
+                {next.cardsDealt} card{next.cardsDealt !== 1 ? 's' : ''}
+                {next.isExtraRound && <span className="text-gold-text ml-1">(max)</span>}
+              </div>
+            </div>
+            {/* Tappable dealer badge → dealer picker */}
+            <button
+              onClick={onChangeDealer}
+              className="shrink-0 text-right border border-gold-300/30 px-2.5 py-1.5 active:bg-gold-300/10"
+            >
+              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-gold-text leading-none">
+                <span className="text-gold-300 text-[11px]">♛</span> Dealer
+              </span>
+              <span className="block font-display font-semibold text-[17px] leading-none text-cream-bright mt-1.5 max-w-[150px] truncate">
+                {next.dealerName}
+              </span>
+            </button>
+          </div>
+
+          <button onClick={onStartNextRound} className="btn-gold w-full h-12 text-base">
+            Start round {next.roundNumber}
+          </button>
+
+          {/* Trump + Last Round toggle in same row */}
+          <div className="flex gap-2 items-stretch">
+            <button onClick={onSelectTrump} className="btn-secondary flex-1 h-11 text-sm">
+              {nextHasTrump && nextSuit ? (
+                <span style={{ color: nextSuit.color }}>{trumpLabel}</span>
+              ) : (
+                <span>{trumpLabel}</span>
+              )}
+            </button>
+            <div className="flex items-center gap-2 px-3 card-gold-subtle">
+              <span className="text-navy-200 text-sm whitespace-nowrap">Last Round</span>
+              <LastRoundToggle
+                isLastRound={next.isLastRound}
+                onDeclare={onDeclareNextLastRound}
+                onUndeclare={onUndeclareNextLastRound}
+              />
+            </div>
+          </div>
+
+          {/* Seating + Add player — rare actions, quieter row */}
+          <div className="flex gap-2">
+            <button onClick={onSeating} className="btn-secondary flex-1 h-10 text-sm">
+              ⠿ Seating
+            </button>
+            <button onClick={onAddPlayer} className="btn-secondary flex-1 h-10 text-sm">
+              + Add player
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Round + game level actions */}
+      {!isLastRound && (
+        <div className="flex gap-2.5 mb-4">
+          <button onClick={onEditRound} className="btn-secondary flex-1 h-10 text-sm">
+            Edit round {round.roundNumber}
+          </button>
+          <button onClick={onEndGame} className="btn-danger flex-1 h-10 text-sm">
+            End game
+          </button>
+        </div>
+      )}
+
       {/* All rounds history table */}
       {completedRounds.length > 1 && (
-        <div className="mb-4">
+        <div>
           <h4 className="section-label mb-2">Every round</h4>
           <div className="card-gold overflow-x-auto">
             <table className="w-full text-xs min-w-max">
@@ -155,33 +292,6 @@ export default function RoundScoreboard({ players, round, allRounds, totalScores
           </div>
         </div>
       )}
-
-      <div className="space-y-2.5">
-        {isLastRound ? (
-          <div className="flex gap-2.5">
-            <button onClick={onEditRound} className="btn-secondary w-[100px] h-12 text-sm">
-              Edit round
-            </button>
-            <button onClick={onEndGame} className="btn-gold flex-1 h-12 text-base">
-              End game
-            </button>
-          </div>
-        ) : (
-          <>
-            <button onClick={onNextRound} className="btn-gold w-full h-12 text-base">
-              Next round
-            </button>
-            <div className="flex gap-2.5">
-              <button onClick={onEditRound} className="btn-secondary flex-1 h-10 text-sm">
-                Edit round
-              </button>
-              <button onClick={onEndGame} className="btn-danger flex-1 h-10 text-sm">
-                End game
-              </button>
-            </div>
-          </>
-        )}
-      </div>
     </div>
   );
 }

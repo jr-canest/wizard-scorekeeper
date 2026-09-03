@@ -50,12 +50,14 @@ wizard-scorekeeper/
     ├── App.jsx              # Main app with all screen routing
     ├── components/
     │   ├── SetupScreen.jsx      # Player names, drag reorder, dealer, Canadian rules, autocomplete
-    │   ├── PreRoundScreen.jsx   # Pre-round: player list, scores, Start/Trump/LastRound
+    │   ├── PreRoundScreen.jsx   # Pre-round (round 1 / back from bidding): seating list, Start/Trump/LastRound
+    │   ├── PlayerOrderList.jsx  # Hold-to-drag seating list + dealer badge (PreRound + SeatingModal)
+    │   ├── SeatingModal.jsx     # Seating order for the NEXT round, opened from the results screen
     │   ├── RoundHeader.jsx      # Compact header during bidding/tricks/scored
     │   ├── TrumpSelection.jsx   # Modal: suit picker with Wizard/Jester reminder
     │   ├── BiddingPhase.jsx     # All players visible, all bid buttons, live summary, shame button
     │   ├── TricksPhase.jsx      # All players visible, Won: X/Y format, shame points, validation
-    │   ├── RoundScoreboard.jsx  # Round results + all-rounds history table
+    │   ├── RoundScoreboard.jsx  # MERGED screen: round results + next-round setup (Start round N+1) + every-round table
     │   ├── GameScoreboard.jsx   # Full-screen: standings + round-by-round table
     │   ├── HistoryScreen.jsx     # All-time stats + past games (Firebase)
     │   ├── AddPlayerModal.jsx   # Mid-game player addition with warning
@@ -85,10 +87,10 @@ wizard-scorekeeper/
 - Max cards per round = `floor(60 / numPlayers)`
 
 ### Round Flow
-1. **Pre-round** — Shows player list with scores, dealer badge. Buttons: Start Round, Select Trump (optional), Declare Last Round, Add Player, End Game
+1. **Pre-round** — Only for round 1 (and when backing out of bidding). Seating list with scores, dealer badge. Buttons: Start Round, Select Trump (optional), Declare Last Round, Change dealer, Add Player, End Game
 2. **Bidding** — All players shown with all bid buttons visible. Bid summary (even/over/underbid) shown as soon as first bid entered
 3. **Tricks** — All players shown with all trick buttons. Shows X/Y (won/bid) colored green (exact) or red (miss). Auto-fills 0 for remaining players when all tricks accounted for. Score Round disabled until all tricks entered and total = cards dealt
-4. **Scored** — Round results table + all-rounds history with running totals and winner highlights
+4. **Scored (merged results + next-round screen, 2026-09-02)** — Round results table, then a **Next up** panel (next round number, cards, tappable dealer badge, **Start round N+1** = create next round + open bidding in one tap, trump + Last Round toggle for the next round, Seating + Add player), then Edit round / End game, then the every-round running-total table. The old separate "Next round → Pre-round → Start round" hop is gone. Choices made here for the not-yet-created round park in `gameState.nextRoundSetup` `{ dealerIndex, trumpSuit, lastRound }` and are consumed by `buildNextRound` in `useGameState.js`; `setDealer` / `setTrumpSuit` / `declareLastRound` / `addPlayerMidGame` all branch on `currentPhase === SCORED` to target the next round. If the scored round was declared last, the panel becomes "Last round played → End game · final scores / Edit round".
 
 ### Cards Per Round
 - Rounds 1 through maxRounds: cards = round number (1, 2, 3, ...)

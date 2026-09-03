@@ -12,7 +12,9 @@ import GameScoreboard from './components/GameScoreboard';
 import AddPlayerModal from './components/AddPlayerModal';
 import ConfirmDialog from './components/ConfirmDialog';
 import HistoryScreen from './components/HistoryScreen';
+import SeatingModal from './components/SeatingModal';
 import { getDemoScenario, getCurrentDemoName } from './utils/demoScenarios';
+import { getCardsForRound } from './utils/roundCalculations';
 
 function WizardLogo({ className = "h-8" }) {
   return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
@@ -33,7 +35,7 @@ export default function App() {
     confirmBids,
     setTricks,
     confirmTricks,
-    nextRound,
+    startNextRound,
     declareLastRound,
     undeclareLastRound,
     addPlayerMidGame,
@@ -56,6 +58,7 @@ export default function App() {
   const [showTrumpPicker, setShowTrumpPicker] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showDealerPicker, setShowDealerPicker] = useState(false);
+  const [showSeating, setShowSeating] = useState(false);
 
   // Wake lock — keep screen awake while app is open.
   // iOS PWAs aggressively release the lock, so we re-acquire on:
@@ -202,6 +205,33 @@ export default function App() {
   // Active players for this round
   const activePlayers = gameState.players.filter(p => p.addedInRound <= round.roundNumber);
 
+  // Merged results screen: the round just scored is on screen while the
+  // NEXT round is being set up. Dealer / trump / last-round choices park
+  // in gameState.nextRoundSetup until Start round creates that round, so
+  // the dealer + trump pickers target the next round while SCORED.
+  const isScored = gameState.currentPhase === PHASES.SCORED;
+  const nextSetup = gameState.nextRoundSetup || {};
+  const nextIndex = gameState.currentRound + 1;
+  const nextDealerIndex =
+    nextSetup.dealerIndex != null && gameState.players[nextSetup.dealerIndex]
+      ? nextSetup.dealerIndex
+      : (round.dealerIndex + 1) % gameState.players.length;
+  const nextDealer = gameState.players[nextDealerIndex] || gameState.players[0];
+  const nextRoundInfo = {
+    roundNumber: round.roundNumber + 1,
+    cardsDealt: getCardsForRound(nextIndex, gameState.maxRounds),
+    isExtraRound: nextIndex >= gameState.maxRounds,
+    roundsLeft: Math.max(0, gameState.maxRounds - (round.roundNumber + 1)),
+    dealerName: nextDealer.name,
+    trumpSuit: nextSetup.trumpSuit ?? null,
+    isLastRound: !!nextSetup.lastRound,
+  };
+  // Pickers: current round's dealer/roster normally; next round's on the
+  // results screen (every player is in next round, including ones added
+  // mid-game).
+  const pickerDealer = isScored ? nextDealer : dealer;
+  const pickerPlayers = isScored ? gameState.players : activePlayers;
+
   return (
     <div className="px-3.5 pb-4 max-w-md mx-auto">
       {/* Shared header bar: ghost action · ◆ logo ◆ · Scores */}
@@ -301,7 +331,14 @@ export default function App() {
           shamePoints={gameState.shamePoints}
           isLastRound={gameState.isLastRound}
           dealerName={dealer.name}
-          onNextRound={nextRound}
+          next={nextRoundInfo}
+          onStartNextRound={startNextRound}
+          onSelectTrump={() => setShowTrumpPicker(true)}
+          onDeclareNextLastRound={declareLastRound}
+          onUndeclareNextLastRound={undeclareLastRound}
+          onChangeDealer={() => setShowDealerPicker(true)}
+          onSeating={() => setShowSeating(true)}
+          onAddPlayer={() => setShowAddPlayer(true)}
           onEndGame={gameState.isLastRound ? endGame : () => setShowEndGameConfirm(true)}
           onEditRound={() => editRound(gameState.currentRound)}
         />
@@ -331,9 +368,20 @@ export default function App() {
         />
       )}
 
+      {showSeating && (
+        <SeatingModal
+          players={gameState.players}
+          allPlayers={gameState.players}
+          dealerId={nextDealer.id}
+          totalScores={totalScores}
+          onReorderPlayers={reorderPlayers}
+          onClose={() => setShowSeating(false)}
+        />
+      )}
+
       {showTrumpPicker && (
         <TrumpSelection
-          dealerName={dealer.name}
+          dealerName={pickerDealer.name}
           onSelect={(suit) => {
             setTrumpSuit(suit);
             setShowTrumpPicker(false);
@@ -365,18 +413,21 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="card-gold bg-[#0d1426] p-5 max-w-sm w-full pop-in">
             <h3 className="font-display font-semibold text-[22px] leading-none text-cream-bright mb-3.5">Change dealer</h3>
+            {isScored && (
+              <p className="text-navy-200 text-xs mb-2">Who deals round {nextRoundInfo.roundNumber}?</p>
+            )}
             <div className="space-y-1 max-h-80 overflow-y-auto">
-              {activePlayers.map((p) => {
+              {pickerPlayers.map((p) => {
                 const playerIndex = gameState.players.indexOf(p);
                 return (
                   <button
                     key={p.id}
                     onClick={() => { setDealer(playerIndex); setShowDealerPicker(false); }}
                     className={`w-full text-left py-2.5 px-3 rounded-lg font-display font-semibold text-[17px] ${
-                      p.id === dealer.id ? 'bg-gold-300/15 text-gold-text' : 'text-cream-bright active:bg-navy-600'
+                      p.id === pickerDealer.id ? 'bg-gold-300/15 text-gold-text' : 'text-cream-bright active:bg-navy-600'
                     }`}
                   >
-                    {p.name} {p.id === dealer.id ? '♛' : ''}
+                    {p.name} {p.id === pickerDealer.id ? '♛' : ''}
                   </button>
                 );
               })}

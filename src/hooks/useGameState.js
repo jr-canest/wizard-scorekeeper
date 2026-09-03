@@ -27,6 +27,48 @@ function saveState(state) {
   }
 }
 
+// Choices made on the merged round-results screen for the round that
+// hasn't been created yet (dealer override, trump, last-round flag).
+// Consumed by buildNextRound when the next round is created.
+const EMPTY_NEXT_SETUP = { dealerIndex: null, trumpSuit: null, lastRound: false };
+
+function getNextSetup(state) {
+  return { ...EMPTY_NEXT_SETUP, ...(state.nextRoundSetup || {}) };
+}
+
+// Appends the next round to `prev` (dealer rotates from the previous
+// round's dealer unless overridden; extra rounds stay at max cards) and
+// clears the pending setup. Phase is left for the caller to set.
+function buildNextRound(prev) {
+  const setup = getNextSetup(prev);
+  const newRoundIndex = prev.currentRound + 1;
+  const cardsDealt = getCardsForRound(newRoundIndex, prev.maxRounds);
+  // Base next dealer on previous round's dealer + 1, not the formula —
+  // this keeps rotation stable when players are added mid-game.
+  const prevDealerIndex = prev.rounds[prev.currentRound].dealerIndex;
+  const dealerIndex =
+    setup.dealerIndex != null && setup.dealerIndex < prev.players.length
+      ? setup.dealerIndex
+      : (prevDealerIndex + 1) % prev.players.length;
+
+  return {
+    ...prev,
+    currentRound: newRoundIndex,
+    isLastRound: !!setup.lastRound,
+    lastRoundTrumpChoice: null,
+    nextRoundSetup: null,
+    rounds: [...prev.rounds, {
+      roundNumber: newRoundIndex + 1,
+      cardsDealt,
+      dealerIndex,
+      trumpSuit: setup.trumpSuit ?? null,
+      bids: {},
+      tricks: {},
+      scores: {},
+    }],
+  };
+}
+
 export function useGameState() {
   const [gameState, setGameState] = useState(null);
   const [hasSavedGame, setHasSavedGame] = useState(false);
@@ -98,11 +140,24 @@ export function useGameState() {
     });
   }, []);
 
+  // On the merged results screen (phase SCORED) the next round doesn't
+  // exist yet, so its dealer / trump / last-round choices park in
+  // nextRoundSetup until Start round creates it (see buildNextRound).
+
   const setTrumpSuit = useCallback((suit) => {
-    updateRound((round) => {
-      round.trumpSuit = suit;
+    setGameState(prev => {
+      if (prev.currentPhase === PHASES.SCORED) {
+        const next = { ...prev, nextRoundSetup: { ...getNextSetup(prev), trumpSuit: suit } };
+        saveState(next);
+        return next;
+      }
+      const next = { ...prev };
+      next.rounds = [...prev.rounds];
+      next.rounds[next.currentRound] = { ...next.rounds[next.currentRound], trumpSuit: suit };
+      saveState(next);
+      return next;
     });
-  }, [updateRound]);
+  }, []);
 
   const startRound = useCallback(() => {
     setGameState(prev => {
@@ -145,38 +200,34 @@ export function useGameState() {
     });
   }, []);
 
+  // Create the next round and land on its pre-round screen. Kept for the
+  // round-1 style flow; the merged results screen uses startNextRound.
   const nextRound = useCallback(() => {
     setGameState(prev => {
-      const next = { ...prev };
-      const newRoundIndex = prev.currentRound + 1;
-      const maxRounds = prev.maxRounds;
-      const cardsDealt = getCardsForRound(newRoundIndex, maxRounds);
-      // Base next dealer on previous round's dealer + 1, not the formula
-      // This keeps rotation stable when players are added mid-game
-      const prevDealerIndex = prev.rounds[prev.currentRound].dealerIndex;
-      const dealerIndex = (prevDealerIndex + 1) % prev.players.length;
-
-      next.currentRound = newRoundIndex;
-      next.currentPhase = PHASES.PREROUND;
-      next.isLastRound = false;
-      next.lastRoundTrumpChoice = null;
-      next.rounds = [...prev.rounds, {
-        roundNumber: newRoundIndex + 1,
-        cardsDealt,
-        dealerIndex,
-        trumpSuit: null,
-        bids: {},
-        tricks: {},
-        scores: {},
-      }];
+      const next = { ...buildNextRound(prev), currentPhase: PHASES.PREROUND };
       saveState(next);
       return next;
     });
   }, []);
 
+  // Merged results screen: create the next round AND open bidding in one
+  // step (what used to be "Next round" then "Start round").
+  const startNextRound = useCallback(() => {
+    setGameState(prev => {
+      const next = { ...buildNextRound(prev), currentPhase: PHASES.BIDDING };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  // On the merged results screen the toggle means "the NEXT round is the
+  // last" — it parks in the setup and becomes isLastRound when that round
+  // is created. Elsewhere it flags the round in progress.
   const declareLastRound = useCallback(() => {
     setGameState(prev => {
-      const next = { ...prev, isLastRound: true, lastRoundTrumpChoice: null };
+      const next = prev.currentPhase === PHASES.SCORED
+        ? { ...prev, nextRoundSetup: { ...getNextSetup(prev), lastRound: true } }
+        : { ...prev, isLastRound: true, lastRoundTrumpChoice: null };
       saveState(next);
       return next;
     });
@@ -184,7 +235,9 @@ export function useGameState() {
 
   const undeclareLastRound = useCallback(() => {
     setGameState(prev => {
-      const next = { ...prev, isLastRound: false, lastRoundTrumpChoice: null };
+      const next = prev.currentPhase === PHASES.SCORED
+        ? { ...prev, nextRoundSetup: { ...getNextSetup(prev), lastRound: false } }
+        : { ...prev, isLastRound: false, lastRoundTrumpChoice: null };
       saveState(next);
       return next;
     });
@@ -192,10 +245,13 @@ export function useGameState() {
 
   const addPlayerMidGame = useCallback((name, startingPoints = 0) => {
     setGameState(prev => {
+      const currentNumber = prev.rounds[prev.currentRound].roundNumber;
       const newPlayer = {
         id: crypto.randomUUID(),
         name,
-        addedInRound: prev.rounds[prev.currentRound].roundNumber, // joins current round
+        // Joins the round being set up: the current one from the pre-round
+        // screen, the next one from the merged results screen.
+        addedInRound: prev.currentPhase === PHASES.SCORED ? currentNumber + 1 : currentNumber,
         startingPoints,
       };
       const next = { ...prev };
@@ -219,6 +275,12 @@ export function useGameState() {
         const newDealerIndex = players.findIndex(p => p.id === dealerPlayer.id);
         return { ...r, dealerIndex: newDealerIndex >= 0 ? newDealerIndex : r.dealerIndex };
       });
+      const setup = getNextSetup(prev);
+      if (setup.dealerIndex != null && prev.players[setup.dealerIndex]) {
+        const id = prev.players[setup.dealerIndex].id;
+        const idx = players.findIndex(p => p.id === id);
+        next.nextRoundSetup = { ...setup, dealerIndex: idx >= 0 ? idx : null };
+      }
       saveState(next);
       return next;
     });
@@ -226,6 +288,11 @@ export function useGameState() {
 
   const setDealer = useCallback((playerIndex) => {
     setGameState(prev => {
+      if (prev.currentPhase === PHASES.SCORED) {
+        const next = { ...prev, nextRoundSetup: { ...getNextSetup(prev), dealerIndex: playerIndex } };
+        saveState(next);
+        return next;
+      }
       const next = { ...prev };
       next.rounds = [...prev.rounds];
       const round = { ...next.rounds[next.currentRound] };
@@ -337,6 +404,7 @@ export function useGameState() {
     setTricks,
     confirmTricks,
     nextRound,
+    startNextRound,
     declareLastRound,
     undeclareLastRound,
     addPlayerMidGame,

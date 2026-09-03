@@ -21,14 +21,15 @@ const SORT_COLUMNS = [
   { key: 'wins', label: 'W' },
   { key: 'gamesPlayed', label: 'GP' },
   { key: 'avg', label: 'Avg' },
+  { key: 'bestScore', label: 'Best' },
 ];
 
 // Shared CSS grid template for the All-Time Stats header + rows.
 // Applying the same template to both eliminates any header/row drift
 // — a column-width change here updates both at once.
-//   rank | name (truncating) | Rtg | Win% | W | GP | Avg
+//   rank | name (truncating) | Rtg | Win% | W | GP | Avg | Best
 const STATS_GRID =
-  'grid grid-cols-[24px_minmax(0,1fr)_46px_44px_26px_26px_40px] items-center';
+  'grid grid-cols-[20px_minmax(0,1fr)_44px_42px_24px_26px_36px_38px] items-center';
 
 // True minus sign (U+2212) for negatives, per the 1b kit
 function formatNum(n) {
@@ -304,7 +305,7 @@ export default function HistoryScreen({ onClose }) {
             ) : (
               <div className="card-gold overflow-hidden">
                 <div
-                  className={`${STATS_GRID} px-3 py-2 border-b border-gold-300/20 text-navy-300 text-[10px] font-semibold uppercase tracking-[0.12em]`}
+                  className={`${STATS_GRID} px-2.5 py-2 border-b border-gold-300/20 text-navy-300 text-[10px] font-semibold uppercase tracking-[0.12em]`}
                 >
                   <span />
                   <span>Player</span>
@@ -313,7 +314,7 @@ export default function HistoryScreen({ onClose }) {
                       key={col.key}
                       onClick={() => handleSort(col.key)}
                       className={`active:text-gold-text ${
-                        col.key === 'avg' ? 'text-right' : 'text-center'
+                        col.key === 'bestScore' ? 'text-right' : 'text-center'
                       } ${sortKey === col.key ? 'text-gold-text' : ''}`}
                     >
                       {col.label}{sortKey === col.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
@@ -335,7 +336,7 @@ export default function HistoryScreen({ onClose }) {
                         setMergeError(null);
                         setPlayerDetail({ mode: 'view', player });
                       }}
-                      className={`w-full text-left ${STATS_GRID} px-3 py-2.5 border-b border-gold-300/10 last:border-0 active:bg-navy-700/40 ${
+                      className={`w-full text-left ${STATS_GRID} px-2.5 py-2.5 border-b border-gold-300/10 last:border-0 active:bg-navy-700/40 ${
                         i === 0 ? 'bg-gold-300/[.07]' : ''
                       }`}
                     >
@@ -357,7 +358,7 @@ export default function HistoryScreen({ onClose }) {
                           )}
                         </div>
                         {(player.totalShamePoints || 0) > 0 && (
-                          <span className="shame-chip mt-0.5 inline-block">
+                          <span className="shame-chip mt-0.5 inline-block whitespace-nowrap">
                             shame{player.totalShamePoints > 1 ? ` ×${player.totalShamePoints}` : ''}
                           </span>
                         )}
@@ -368,10 +369,13 @@ export default function HistoryScreen({ onClose }) {
                       <span className="text-center font-semibold text-[13px] text-cream tabular-nums">{winRate}%</span>
                       <span className="text-center font-semibold text-[13px] text-[#6ee7b7] tabular-nums">{player.wins || 0}</span>
                       <span className="text-center font-medium text-[13px] text-navy-200 tabular-nums">{gp}</span>
-                      <span className={`text-right font-semibold text-[13px] tabular-nums ${
+                      <span className={`text-center font-semibold text-[13px] tabular-nums ${
                         avg > 0 ? 'text-[#6ee7b7]' : avg < 0 ? 'text-[#fda4af]' : 'text-navy-200'
                       }`}>
                         {formatNum(avg)}
+                      </span>
+                      <span className="text-right font-semibold text-[13px] text-cream tabular-nums">
+                        {player.bestScore != null ? formatNum(player.bestScore) : '—'}
                       </span>
                     </button>
                   );

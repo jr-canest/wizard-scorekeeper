@@ -19,19 +19,39 @@ export default function TricksPhase({ players, dealerId, cardsDealt, roundNumber
     window.scrollTo(0, 0);
   }, []);
 
-  // After entering a player's tricks, glide to the next player still
-  // missing one (wrapping around). When this entry completes the total
-  // (auto-fill zeroes the rest) or everyone is set, glide to the footer.
+  // The player whose tricks the table is waiting on — first in seating
+  // order without a number — gets the active gold panel.
+  const nextUnsetId = biddingOrder.find(p => !(p.id in tricks))?.id ?? null;
+
+  // Auto-scroll only while tricks are being entered in seating order,
+  // i.e. every tap lands on the highlighted "won?" player. The first tap
+  // that skips ahead, or that bumps a player who already has a number
+  // (counting tricks live as they're won), switches the rest of the
+  // round to manual scrolling — jumping away mid-count is worse than no
+  // help at all. Lowering a number is treated as a correction and keeps
+  // the in-order flow alive. Completing the total (auto-fill zeroes the
+  // rest) always glides to the Score button.
+  const manualScrollRef = useRef(false);
+
   function handleTrick(playerId, n) {
+    const wasSet = playerId in tricks;
+    const inOrder = !manualScrollRef.current && !wasSet && playerId === nextUnsetId;
+    const isBump = wasSet && n > tricks[playerId];
+    if (!inOrder && (!wasSet || isBump)) manualScrollRef.current = true;
+
     onTrick(playerId, n);
     const after = { ...tricks, [playerId]: n };
     const sum = Object.values(after).reduce((s, t) => s + t, 0);
-    const idx = biddingOrder.findIndex(p => p.id === playerId);
-    const order = [...biddingOrder.slice(idx + 1), ...biddingOrder.slice(0, idx)];
-    const next = sum >= cardsDealt ? null : order.find(p => !(p.id in after));
+    const complete = sum >= cardsDealt;
+    const next = biddingOrder.find(p => !(p.id in after));
+    const el = complete
+      ? footerRef.current
+      : inOrder
+        ? (next ? cardRefs.current[next.id] : footerRef.current)
+        : null;
+    if (!el) return;
     requestAnimationFrame(() => {
-      const el = next ? cardRefs.current[next.id] : footerRef.current;
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
@@ -59,9 +79,6 @@ export default function TricksPhase({ players, dealerId, cardsDealt, roundNumber
       setShameTarget(null);
     }
   }, [shameTarget, onShame]);
-
-  // The player whose tricks the table is waiting on — active gold panel.
-  const nextUnsetId = biddingOrder.find(p => !(p.id in tricks))?.id ?? null;
 
   const tone = tricksAssigned > cardsDealt ? 'over' : tricksAssigned === cardsDealt ? 'even' : 'under';
   const statusText = tone === 'even'

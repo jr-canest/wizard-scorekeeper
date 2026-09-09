@@ -2,10 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import UpdateBanner from './components/UpdateBanner.jsx'
 import { isTestMode } from './utils/testMode'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    {/* Sticky "New version available · Update" strip, shown only once a
+        newer build is live. Sits above the app so it's on every screen. */}
+    <UpdateBanner />
     <App />
     {/* Test-mode ribbon — pinned to the bottom so it never covers the
         sticky phase status bar at the top. */}

@@ -10,7 +10,11 @@ const TONES = {
 export default function PhaseStatusBar({ eyebrow, roundNumber, total, target, statusText, tone }) {
   const toneText = TONES[tone] || 'text-cream';
   return (
-    <div className="sticky top-0 z-20 -mx-3.5 px-3.5 pt-3 bg-[#0b1224]">
+    // top offset = update-banner height while that banner is showing
+    <div
+      className="sticky z-20 -mx-3.5 px-3.5 pt-3 bg-[#0b1224]"
+      style={{ top: 'var(--update-banner-h, 0px)' }}
+    >
       <div className="flex items-end justify-between">
         <div>
           <div className="eyebrow mb-[7px]">{eyebrow}</div>

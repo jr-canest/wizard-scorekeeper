@@ -3,6 +3,7 @@ import { STORAGE_KEY, PHASES } from '../utils/constants';
 import { getMaxRounds, getCardsForRound, getDealerIndex } from '../utils/roundCalculations';
 import { calculateRoundScores, calculateTotalScores } from '../utils/scoring';
 import { isTestMode } from '../utils/testMode';
+import { consumeResumeAfterUpdate } from '../utils/appVersion';
 
 // Test mode gets its own slot so playing a throwaway game never
 // clobbers a real game in progress on the same device.
@@ -74,12 +75,15 @@ export function useGameState() {
   const [hasSavedGame, setHasSavedGame] = useState(false);
 
   useEffect(() => {
+    // One-shot flag set by the update banner before it reloads: skip the
+    // resume prompt and drop straight back into the game in progress.
+    const resumeNow = consumeResumeAfterUpdate();
     const saved = loadState();
     if (saved && saved.players && saved.players.length >= 2) {
       // Once-on-mount hydrate from localStorage — there's no
       // serializable equivalent we could compute in render.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHasSavedGame(true);
+      if (resumeNow) setGameState(saved); else setHasSavedGame(true);
     }
   }, []);
 

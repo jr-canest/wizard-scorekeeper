@@ -7,7 +7,7 @@
 - **Repo:** https://github.com/jr-canest/wizard-scorekeeper
 - **Live:** https://wizard-scorekeeper.web.app (Firebase Hosting, target `scorekeeper` under project `wizard-scores-2521c`). Old GH Pages URL `jr-canest.github.io/wizard-scorekeeper/` is no longer canonical.
 - **Run locally:** `cd wizard-scorekeeper && npm install && npm run dev`
-- **Deploy:** push to `main` = CI deploy (GitHub Actions: lint + build + `hosting:scorekeeper`; Cloud Functions NOT included — deploy those manually). Phone/cloud Claude sessions ship by pushing. Manual fallback from a Mac: `npm run build && firebase deploy --only hosting:scorekeeper --project wizard-scores-2521c`. **Always `git pull` before working locally** — changes may land from cloud sessions.
+- **Deploy:** push to `main` = CI deploy (GitHub Actions: lint + build + `hosting:scorekeeper`; Cloud Functions NOT included — deploy those manually). Phone/cloud Claude sessions ship by pushing. Manual fallback from a Mac: `npm run build && firebase deploy --only hosting:scorekeeper --project wizard-scores-2521c`. Every build gets an automatic version stamp (see **Version & update banner**) — nothing to bump. **Always `git pull` before working locally** — changes may land from cloud sessions.
 - **CI secret:** `FIREBASE_SERVICE_ACCOUNT_WIZARD` (service account `github-deploy@wizard-scores-2521c`, also used by the wizard-multiplayer repo)
 - **Firebase console:** https://console.firebase.google.com (project: wizard-scores-2521c)
 
@@ -63,9 +63,11 @@ wizard-scorekeeper/
     │   ├── AddPlayerModal.jsx   # Mid-game player addition with warning
     │   ├── ConfirmDialog.jsx    # Reusable confirmation modal
     │   ├── BooToast.jsx         # Full-screen "BOOOO, NAME!" confirmation when a shame point is given
-    │   └── BarChartRace.jsx     # SVG score-line replay on game over (auto-plays, ref-smoothed label swaps)
+    │   ├── BarChartRace.jsx     # SVG score-line replay on game over (auto-plays, ref-smoothed label swaps)
+    │   └── UpdateBanner.jsx     # Sticky "New version available · Update" strip once a newer build is live
     ├── hooks/
-    │   └── useGameState.js      # All game state + localStorage persistence
+    │   ├── useGameState.js      # All game state + localStorage persistence
+    │   └── useUpdateCheck.js    # Polls /version.json; returns the live version once it differs from the build
     └── utils/
         ├── scoring.js           # Exact bid: 20+10*tricks, Miss: -10*|diff|
         ├── roundCalculations.js # Max rounds, cards per round, bid constraints
@@ -74,6 +76,7 @@ wizard-scorekeeper/
         ├── sounds.js            # Web Audio API sounds (boo, sparkle)
         ├── booPhrases.js        # Randomized "BOO NAME BOO!" phrases for shame toast
         ├── demoScenarios.js     # Mock game-over data for ?demo=<name> preview mode
+        ├── appVersion.js        # APP_VERSION build stamp, formatVersion, resume-after-update flag
         └── constants.js         # Suits, phases, limits (2-12 players, 60 cards)
 ```
 
@@ -216,6 +219,15 @@ games/{gameId}:
 - **Label smoothing**: each player's displayed Y is kept in `displayedLabelYRef` and advances 22% of the distance toward its target every frame. Rank-swap jumps slide over ~8 frames (~130ms); continuous smooth tracking barely lags. This replaces an earlier CSS-transition approach that desynced when targets changed every frame.
 
 ---
+
+## Version & update banner
+
+- **Build stamp** = build date + short commit, e.g. `2026.09.09-295a51d`, computed in `vite.config.js` (`git rev-parse --short HEAD`, falls back to `GITHUB_SHA`, then `dev`). Baked in as `import.meta.env.VITE_APP_VERSION` (read via `APP_VERSION` in `src/utils/appVersion.js`) and emitted as `dist/version.json` by a tiny Vite plugin. No manual bumping — every CI deploy is a new version
+- **Where it shows**: setup screen footer under the "test game" link, formatted `v2026.09.09 · 295a51d` (`formatVersion`)
+- **Update check** (`src/hooks/useUpdateCheck.js`): fetches `/version.json` with `cache: 'no-store'` on load, whenever the tab/PWA comes back to the foreground (`visibilitychange`), and every 5 min. Skipped in dev. Network errors are swallowed (offline mid-game must never surface anything)
+- **Banner** (`UpdateBanner.jsx`, mounted in `main.jsx` above `<App/>`): sticky 40px strip, `z-30`, not dismissable. While shown it sets `--update-banner-h` on `<body>` and `PhaseStatusBar` uses that as its sticky `top` so the two don't overlap. Fixed overlays (History, mid-game Scores) cover it; game-over is in normal flow so it shows there
+- **Update keeps the game**: game state is already in localStorage on every change. The button sets a one-shot `sessionStorage` flag (`markResumeAfterUpdate`) then `location.reload()`; `useGameState`'s mount effect consumes it (`consumeResumeAfterUpdate`) and hydrates the saved game directly instead of showing the "Resume your previous game?" prompt. A plain reload still shows the prompt
+- **Hosting headers** (`firebase.json`): `/version.json` is `no-cache, no-store, must-revalidate`; `/index.html` is `no-cache` so a returning phone never boots a stale shell pointing at purged hashed assets
 
 ## Test Mode (hidden, works in production)
 

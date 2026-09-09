@@ -4,6 +4,7 @@ import { getMaxRounds } from '../utils/roundCalculations';
 import { searchPlayers, isProduction } from '../utils/firebase';
 import { getDemoNames } from '../utils/demoScenarios';
 import { isTestMode } from '../utils/testMode';
+import { formatVersion } from '../utils/appVersion';
 
 // Test mode preloads throwaway players so a test game is one tap away.
 // Nothing is saved in test mode, so these names never reach Firestore.
@@ -377,6 +378,8 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
             test game
           </a>
         )}
+        {/* Build stamp (date · commit) so it's obvious which build a phone is on */}
+        <p className="text-navy-200/25 text-[10px] tabular-nums mt-1.5">{formatVersion()}</p>
       </div>
 
       {/* Dev-only demo panel — localhost only, never shows in production */}

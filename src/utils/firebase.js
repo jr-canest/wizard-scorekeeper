@@ -17,6 +17,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { isTestMode } from './testMode';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBT1yNBK3DyIk9GhiPc-heuBBBbjThlm88",
@@ -48,6 +49,22 @@ export async function fetchAISummary(payload) {
     console.warn('[Firebase] AI summary failed:', err);
     return null;
   }
+}
+
+// Pre-warm the recap function. Cloud Run spins instances down between
+// games, so the game-over call otherwise pays a 2-6 s cold start before
+// the model even starts. Fire-and-forget; errors are ignored (an error
+// reply still brings an instance up). Throttled so the phase changes of
+// the last round don't spam it — instances stay warm ~15 min idle.
+const WARM_INTERVAL_MS = 5 * 60 * 1000;
+let lastWarmAt = 0;
+
+export function warmSummaryFunction() {
+  if (!isProduction() || isTestMode()) return;
+  const now = Date.now();
+  if (now - lastWarmAt < WARM_INTERVAL_MS) return;
+  lastWarmAt = now;
+  generateGameSummaryFn({ warmup: true }).catch(() => {});
 }
 
 /** Returns true if running on the live GitHub Pages site */

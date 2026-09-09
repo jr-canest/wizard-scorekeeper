@@ -15,6 +15,7 @@ import HistoryScreen from './components/HistoryScreen';
 import SeatingModal from './components/SeatingModal';
 import { getDemoScenario, getCurrentDemoName } from './utils/demoScenarios';
 import { getCardsForRound } from './utils/roundCalculations';
+import { warmSummaryFunction } from './utils/firebase';
 
 function WizardLogo({ className = "h-8" }) {
   return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
@@ -59,6 +60,18 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showDealerPicker, setShowDealerPicker] = useState(false);
   const [showSeating, setShowSeating] = useState(false);
+
+  // Pre-warm the AI recap function as soon as the game is heading for its
+  // end: the last round is declared (for this round or the next one), or
+  // the End game confirm is open. Re-fires on each phase change of that
+  // round so a declaration made long before the end still counts;
+  // warmSummaryFunction throttles the actual pings.
+  const headingToGameOver =
+    gameState?.currentPhase !== 'finished' &&
+    (!!gameState?.isLastRound || !!gameState?.nextRoundSetup?.lastRound || showEndGameConfirm);
+  useEffect(() => {
+    if (headingToGameOver) warmSummaryFunction();
+  }, [headingToGameOver, gameState?.currentPhase]);
 
   // Wake lock — keep screen awake while app is open.
   // iOS PWAs aggressively release the lock, so we re-acquire on:

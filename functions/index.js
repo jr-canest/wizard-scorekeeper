@@ -4,6 +4,10 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 
+// True once this instance has served a request — lets the logs say
+// whether a slow recap was a cold start.
+let warmed = false;
+
 // Allow calls from the live Firebase Hosting sites (scorekeeper +
 // multiplayer), the legacy GitHub Pages mirror, and local dev.
 // NOTE: when the apps moved from GitHub Pages to *.web.app this list
@@ -47,11 +51,24 @@ export const generateGameSummary = onCall(
   },
   async (request) => {
     const data = request.data || {};
+
+    // Pre-warm ping. The client sends this when the table declares the
+    // last round, so the real game-over call lands on an instance that
+    // is already up (a cold start is 2-6 s on top of the API call).
+    if (data.warmup) {
+      const cold = !warmed;
+      warmed = true;
+      return { ok: true, cold };
+    }
+
     const players = Array.isArray(data.players) ? data.players : [];
 
     if (players.length === 0) {
       throw new HttpsError('invalid-argument', 'players array is required');
     }
+
+    const cold = !warmed;
+    warmed = true;
 
     const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
 
@@ -155,16 +172,27 @@ HARD RULES:
 
     let text;
     try {
+      const apiStart = Date.now();
       const message = await client.messages.create({
         model: 'claude-sonnet-5',
-        // Sonnet 5's adaptive thinking tokens count against max_tokens.
-        // At 300 the thinking ate the budget and the text came back
-        // truncated or empty ("Empty response from model" 500s) — keep
-        // plenty of headroom above the ~120-word recap.
+        // Sonnet 5 runs adaptive thinking by default, and those tokens
+        // count against max_tokens. At the default (high) effort it spent
+        // hundreds to thousands of tokens reasoning about an 80-word roast
+        // before writing a word — the main reason recaps blew past the
+        // client's 15 s watchdog. Low effort keeps thinking near zero for
+        // a task this size; 1500 stays as headroom in case it does think.
         max_tokens: 1500,
+        output_config: { effort: 'low' },
         temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });
+      // One line per recap so slow games can be diagnosed in the Firebase
+      // logs: cold start or not, API round trip, and how many output
+      // tokens (thinking + text) the model produced.
+      console.info(
+        `generateGameSummary: ${cold ? 'cold' : 'warm'} instance, api ${Date.now() - apiStart}ms, ` +
+        `output_tokens ${message.usage?.output_tokens ?? '?'}, stop ${message.stop_reason}`
+      );
       if (message.stop_reason === 'max_tokens') {
         console.warn('generateGameSummary: hit max_tokens, recap may be truncated');
       }

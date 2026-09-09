@@ -23,7 +23,7 @@
   - Saves only in production (skips on localhost)
   - Collections: `players` (case-insensitive name matching via `nameLower`), `games` (results per game)
 - **Firebase Cloud Functions** (Blaze plan) for AI-generated game summaries
-  - `generateGameSummary` — us-central1, Node 20, callable
+  - `generateGameSummary` — us-central1, Node 24, callable
   - Calls Anthropic Claude Sonnet 5 via `@anthropic-ai/sdk` with `output_config: { effort: 'low' }` — Sonnet 5 runs adaptive thinking when `thinking` is omitted, and at the default effort it spent hundreds-to-thousands of tokens reasoning about an 80-word roast, which is what pushed recaps past the client's 15 s watchdog (2026-09-09). Logs one `cold|warm instance, api Nms, output_tokens N` line per recap
   - **Warmup**: the client sends `{ warmup: true }` (returns immediately) once the last round is declared / End game confirm opens, re-pinged per phase change and throttled to one per 5 min (`warmSummaryFunction` in `firebase.js`, effect in `App.jsx`), so the game-over call skips the 2-6 s cold start
   - API key stored as secret: `ANTHROPIC_API_KEY` (Google Secret Manager)
@@ -42,7 +42,7 @@ wizard-scorekeeper/
 ├── .firebaserc             # Firebase project pinning (wizard-scores-2521c)
 ├── functions/              # Cloud Functions source
 │   ├── index.js            # generateGameSummary (Claude Sonnet 5, effort low) + warmup ping
-│   └── package.json        # Node 20, @anthropic-ai/sdk, firebase-functions
+│   └── package.json        # Node 24, @anthropic-ai/sdk, firebase-functions
 ├── public/favicon.svg
 │   └── wizard-logo.svg      # Gold gradient "WIZARD" wordmark logo
 └── src/

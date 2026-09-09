@@ -183,7 +183,6 @@ HARD RULES:
         // a task this size; 1500 stays as headroom in case it does think.
         max_tokens: 1500,
         output_config: { effort: 'low' },
-        temperature: 1,
         messages: [{ role: 'user', content: prompt }],
       });
       // One line per recap so slow games can be diagnosed in the Firebase

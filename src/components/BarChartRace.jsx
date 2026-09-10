@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { isProduction } from '../utils/firebase';
 
 const LINE_COLORS = [
   '#e6cc80', // gold
@@ -15,6 +16,67 @@ const LINE_COLORS = [
 
 // Easing (smoothstep)
 const easeInOut = (t) => t * t * (3 - 2 * t);
+
+// Dev-only: `?chartAt=2.5` opens the replay paused at that progress so a
+// mid-animation frame can be inspected (screenshots, DOM checks). Ignored
+// in production.
+function devChartAt() {
+  if (isProduction()) return null;
+  const raw = new URLSearchParams(window.location.search).get('chartAt');
+  if (raw === null) return null;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/*
+ * Each line segment is a cubic with horizontal tangents at both data
+ * points (control points at the segment's mid-x). For that curve:
+ *   x(t) = x0 + (x1 − x0) · (1.5t(1−t) + t³)   (monotonic in t)
+ *   y(t) = y0 + (y1 − y0) · t²(3 − 2t)
+ * The replay's x moves linearly with progress, so the tip of the line at
+ * a given progress is the curve point whose x matches — found by solving
+ * the first equation for t. Everything at the tip (the visible end of the
+ * line, the dot, the label, the score) is then read from that one point.
+ * Previously the line was trimmed by stroke-dasharray, i.e. as a fraction
+ * of ARC LENGTH, while the dot moved linearly in x with an eased score —
+ * steep segments are longer, so the dot ran ahead of or behind the tip
+ * by up to ~7 units (of 320) and sat slightly off the curve.
+ */
+function solveCurveT(u) {
+  // Invert x-fraction u ∈ [0,1] → t (bisection; g is strictly increasing).
+  let lo = 0;
+  let hi = 1;
+  for (let k = 0; k < 24; k++) {
+    const mid = (lo + hi) / 2;
+    const g = 1.5 * mid * (1 - mid) + mid * mid * mid;
+    if (g < u) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+const fmt = (n) => n.toFixed(2);
+function segmentString(x0, y0, x1, y1) {
+  const m = (x0 + x1) / 2;
+  return ` C ${fmt(m)} ${fmt(y0)}, ${fmt(m)} ${fmt(y1)}, ${fmt(x1)} ${fmt(y1)}`;
+}
+// De Casteljau split of the segment at t: returns the partial curve's
+// command string and its end point (the tip).
+function partialSegment(x0, y0, x1, y1, t) {
+  const m = (x0 + x1) / 2;
+  const P = [[x0, y0], [m, y0], [m, y1], [x1, y1]];
+  const L = (a, b) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  const A = L(P[0], P[1]);
+  const B = L(P[1], P[2]);
+  const C = L(P[2], P[3]);
+  const AB = L(A, B);
+  const BC = L(B, C);
+  const tip = L(AB, BC);
+  return {
+    cmd: ` C ${fmt(A[0])} ${fmt(A[1])}, ${fmt(AB[0])} ${fmt(AB[1])}, ${fmt(tip[0])} ${fmt(tip[1])}`,
+    x: tip[0],
+    y: tip[1],
+  };
+}
 
 export default function BarChartRace({ players, completedRounds, onDone }) {
   const [progress, setProgress] = useState(0); // 0 = starting totals, totalRounds = final scores
@@ -143,11 +205,18 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
 
   // Auto-start after game-over wipe has landed
   useEffect(() => {
+    const at = devChartAt();
+    if (at !== null) {
+      setProgress(Math.max(0, Math.min(totalRounds, at)));
+      return undefined;
+    }
     const timer = setTimeout(() => {
       setProgress(0);
       setIsPlaying(true);
     }, 1200);
     return () => clearTimeout(timer);
+    // totalRounds is fixed for the life of the component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const currentRoundLabel = Math.min(totalRounds, Math.max(0, Math.round(progress)));
@@ -195,16 +264,14 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
         if (score === undefined) continue;
         points.push({ x: xForRound(ri), y: yForScore(score), ri, score });
       }
-      if (points.length < 2) return { id: p.id, path: '', points };
-
-      let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+      if (points.length < 2) return { id: p.id, points, segs: [] };
+      // One cubic command per segment; the revealed path is a prefix of
+      // these plus a split of the segment the tip is on.
+      const segs = [];
       for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        const cpx = (prev.x + curr.x) / 2;
-        d += ` C ${cpx.toFixed(2)} ${prev.y.toFixed(2)}, ${cpx.toFixed(2)} ${curr.y.toFixed(2)}, ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`;
+        segs.push(segmentString(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y));
       }
-      return { id: p.id, path: d, points };
+      return { id: p.id, points, segs };
     });
     // xForRound + yForScore close over totalRounds/min/max already
     // in the dep list — adding the functions themselves would force a
@@ -212,18 +279,40 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players, scoreData, totalRounds, minScore, maxScore]);
 
-  const pathLengths = useRef({});
-
-  // How much of the path to reveal based on progress (0..1 per player)
-  const getPathReveal = (playerId) => {
-    const line = playerLines.find((l) => l.id === playerId);
-    if (!line || line.points.length < 2) return 0;
-    const first = line.points[0].ri;
-    const last = line.points[line.points.length - 1].ri;
-    const range = last - first;
-    if (range === 0) return 1;
-    return Math.min(1, Math.max(0, (progress - first) / range));
-  };
+  // The tip of every line at the current progress: the revealed path
+  // (cut exactly there), the point itself, and the score at that point.
+  const tips = useMemo(() => {
+    const out = {};
+    for (const line of playerLines) {
+      const { points, segs } = line;
+      if (points.length < 2) continue;
+      const first = points[0];
+      const last = points[points.length - 1];
+      const head = `M ${fmt(first.x)} ${fmt(first.y)}`;
+      if (progress <= first.ri) {
+        out[line.id] = { path: head, x: first.x, y: first.y, score: first.score };
+        continue;
+      }
+      if (progress >= last.ri) {
+        out[line.id] = { path: head + segs.join(''), x: last.x, y: last.y, score: last.score };
+        continue;
+      }
+      let i = 1;
+      while (i < points.length - 1 && points[i].ri <= progress) i++;
+      const a = points[i - 1];
+      const b = points[i];
+      const u = (progress - a.ri) / (b.ri - a.ri);
+      const t = solveCurveT(u);
+      const part = partialSegment(a.x, a.y, b.x, b.y, t);
+      out[line.id] = {
+        path: head + segs.slice(0, i - 1).join('') + part.cmd,
+        x: part.x,
+        y: part.y,
+        score: a.score + (b.score - a.score) * easeInOut(t),
+      };
+    }
+    return out;
+  }, [playerLines, progress]);
 
   // Gridlines at "nice" score intervals
   const gridLines = useMemo(() => {
@@ -243,8 +332,9 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     const active = players
       .filter((p) => isActiveAt(p.id, progress))
       .map((p) => {
-        const rawScore = getScoreAt(p.id, progress);
-        return { id: p.id, dotY: yForScore(rawScore) };
+        const tip = tips[p.id];
+        const dotY = tip ? tip.y : yForScore(getScoreAt(p.id, progress));
+        return { id: p.id, dotY };
       });
 
     if (active.length === 0) return {};
@@ -282,7 +372,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     // (already in deps), so it'd just churn the memo without changing the
     // output.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [players, progress, getScoreAt, isActiveAt, minScore, maxScore]);
+  }, [players, progress, tips, getScoreAt, isActiveAt, minScore, maxScore]);
 
   // Displayed label positions smoothly approach the targets via exponential
   // smoothing. This handles rank-swap jumps gracefully (label slides to its
@@ -357,7 +447,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         className="w-full"
-        style={{ height: 'auto', maxHeight: '360px' }}
+        style={{ height: 'auto', maxHeight: '360px', overflow: 'visible' }}
       >
         {/* Gridlines at nice intervals */}
         {gridLines.map((v) => (
@@ -380,28 +470,19 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
           </g>
         ))}
 
-        {/* Lines — revealed portion using dasharray */}
+        {/* Lines — each cut exactly at its tip for the current progress */}
         {playerLines.map((line) => {
-          const reveal = getPathReveal(line.id);
+          const tip = tips[line.id];
+          if (!tip) return null;
           return (
             <path
               key={`fg-${line.id}`}
-              d={line.path}
+              d={tip.path}
               fill="none"
               stroke={playerColors[line.id]}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
-              ref={(el) => {
-                if (el && !pathLengths.current[line.id]) {
-                  pathLengths.current[line.id] = el.getTotalLength();
-                }
-              }}
-              strokeDasharray={pathLengths.current[line.id] || 1000}
-              strokeDashoffset={
-                (pathLengths.current[line.id] || 1000) * (1 - reveal)
-              }
-              style={{ opacity: reveal > 0 ? 1 : 0 }}
             />
           );
         })}
@@ -409,10 +490,13 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
         {/* Moving dots + labels at current position */}
         {players.map((p) => {
           if (!isActiveAt(p.id, progress)) return null;
-          const rawScore = getScoreAt(p.id, progress);
+          const tip = tips[p.id];
+          // Single-point lines (a player added on the final round) have no
+          // curve to sit on — fall back to the interpolated position.
+          const rawScore = tip ? tip.score : getScoreAt(p.id, progress);
           const displayScore = Math.round(rawScore);
-          const x = xForRound(Math.min(progress, totalRounds));
-          const dotY = yForScore(rawScore);
+          const x = tip ? tip.x : xForRound(Math.min(progress, totalRounds));
+          const dotY = tip ? tip.y : yForScore(rawScore);
           const labelY = labelPositions[p.id] ?? (dotY - 4);
           const labelCenterY = labelY + 5;
           const dotToLabelOffset = Math.abs(labelCenterY - dotY);

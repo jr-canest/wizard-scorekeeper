@@ -218,6 +218,8 @@ games/{gameId}:
 - Everyone starts at 0 on the left edge; each player gets a distinct color (10 in the `LINE_COLORS` palette)
 - **Label collision avoidance**: sorts active labels by dot Y each frame, stacks 22px apart, clamps stack inside chart bounds. When the stack overflows the bottom (e.g. start of game), it shifts up so nothing clips; a faint connector line is drawn when a label is pulled away from its dot.
 - **Label smoothing**: each player's displayed Y is kept in `displayedLabelYRef` and advances 22% of the distance toward its target every frame. Rank-swap jumps slide over ~8 frames (~130ms); continuous smooth tracking barely lags. This replaces an earlier CSS-transition approach that desynced when targets changed every frame.
+- **Tip = dot (2026-09-10)**: each line is drawn as a path cut exactly at the current progress (the last cubic segment is split with de Casteljau at the `t` whose x matches), and the dot, label and score all read from that tip point. The old stroke-dasharray reveal trimmed by ARC LENGTH while the dot moved linearly in x, so on steep segments the dot ran up to ~7 viewBox units ahead of or behind the line end and sat slightly off the curve.
+- **Dev scrub**: `?demo=chaotic&chartAt=6.5` (localhost only) opens the replay paused at that progress — the browser pane doesn't run rAF while hidden, so this is how mid-animation frames get inspected/screenshotted.
 
 ---
 

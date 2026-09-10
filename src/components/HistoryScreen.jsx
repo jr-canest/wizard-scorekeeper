@@ -467,6 +467,7 @@ export default function HistoryScreen({ onClose }) {
                                 {(r.shamePoints || 0) > 0 && (
                                   <span className="shame-chip">shame{r.shamePoints > 1 ? ` ×${r.shamePoints}` : ''}</span>
                                 )}
+                                {r.bot && <span className="cpu-chip">CPU · {r.bot}</span>}
                               </div>
                               <span className={`font-bold text-[15px] leading-none tabular-nums ${
                                 r.score > 0 ? 'text-[#6ee7b7]' : r.score < 0 ? 'text-[#fda4af]' : 'text-cream'
@@ -933,6 +934,7 @@ function GameDetailOverlay({
                     <span className={`font-display font-semibold text-[15px] truncate ${ri === 0 ? 'text-cream-bright' : 'text-cream'}`}>
                       {r.name}
                     </span>
+                    {r.bot && <span className="cpu-chip">CPU · {r.bot}</span>}
                   </div>
                   <span className={`font-display font-semibold text-[17px] leading-none tabular-nums ${
                     r.score > 0 ? 'text-[#6ee7b7]' : r.score < 0 ? 'text-[#fda4af]' : 'text-cream'

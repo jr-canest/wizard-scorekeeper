@@ -548,7 +548,7 @@ async function findBestWorstForNames(names) {
   for (const d of snap.docs) {
     const data = d.data();
     for (const r of data.results || []) {
-      if (!nameSet.has(r.name)) continue;
+      if (r.bot || !nameSet.has(r.name)) continue;
       if (best === null || r.score > best) best = r.score;
       if (worst === null || r.score < worst) worst = r.score;
     }
@@ -577,7 +577,7 @@ export async function deleteHistoryGame(gameId) {
 
   const resolved = await Promise.all(
     results.map(async (r) => {
-      if (!r.playerId) return null;
+      if (r.bot || !r.playerId) return null;
       const canonicalId = await resolveCanonicalPlayerId(r.playerId);
       const pSnap = await getDoc(doc(db, 'players', canonicalId));
       if (!pSnap.exists()) return null;

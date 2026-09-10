@@ -76,6 +76,7 @@ export function computePodiumStats(players, games) {
     const results = Array.isArray(game?.results) ? game.results : [];
     const playerCount = game.playerCount || results.length;
     for (const r of results) {
+      if (r.bot) continue; // computer seat (multiplayer) — no player doc, no rating
       const canonicalId =
         (r.playerId && idToCanonical.get(r.playerId)) ||
         (typeof r.name === 'string' ? nameToCanonical.get(r.name.toLowerCase()) : null);

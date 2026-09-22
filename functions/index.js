@@ -155,7 +155,7 @@ ${context}
 
 Write in the voice of ${voice}. Never name or announce the persona ("as a bard…") — just let it color the word choice and attitude.
 
-This is a ROAST, and it should be dripping with puns. Work in at least two groan-worthy wizard/card puns — wordplay on trick, trump, bid, charm, wand, spellbook, conjure, "no trick pony", "bid farewell", "trumped up" — the cornier the better, commit to them shamelessly. Be merciless with the numbers: roast the biggest bust AND the bottom of the table by name, give the winner at most a backhanded compliment ("congratulations, barely"), and let the actual stats land the punchlines. This recap is for the table — they know the game, so be knowing: read the story in the stats (a blowout, a nail-biter, a comeback, a chaotic mess, a collective meltdown) and commit to that story. Lean on the single juiciest specific stat above (a +50 round, a serial overbidder, a razor-thin margin) instead of generic adjectives. Aim for the recap someone reads out loud and the whole table groans, then laughs, then someone demands a rematch.
+This is a ROAST, and it should be dripping with puns. Work in at least one groan-worthy wizard/card pun, two if they fit — wordplay on trick, trump, bid, charm, wand, spellbook, conjure, "no trick pony", "bid farewell", "trumped up" — the cornier the better, commit to them shamelessly. Be merciless with the numbers: roast the biggest bust AND the bottom of the table by name, give the winner at most a backhanded compliment ("congratulations, barely"), and let the actual stats land the punchlines. This recap is for the table — they know the game, so be knowing: read the story in the stats (a blowout, a nail-biter, a comeback, a chaotic mess, a collective meltdown) and commit to that story. Lean on the single juiciest specific stat above (a +50 round, a serial overbidder, a razor-thin margin) instead of generic adjectives. Aim for the recap someone reads out loud and the whole table groans, then laughs, then someone demands a rematch.
 
 Use real Wizard lingo naturally (bids, tricks, trump, Wizards, Jesters, overbid, busted, nailed it) with light magic flavor. Keep the fantasy friendly — Gandalf / Wizard of Oz energy, nothing dark: no curses, hexes, death, doom, or dark magic. "Misfire", "fumble", "spell gone wrong" are the vibe for failure.
 
@@ -165,7 +165,7 @@ HARD RULES:
 - Mention EVERY player by name at least once — mid-table players get at least a quick jab or shoutout.
 - Wrap each player name's first appearance in HTML <b>Name</b> tags, e.g. <b>Alice</b>. NEVER markdown bold (**Alice** renders as literal asterisks).
 - Output ONLY the recap: no title, no markdown, no quotes around it, no preamble.
-- One paragraph, 2-4 sentences, 50-85 words. Shorter and sharper beats longer.
+- One paragraph, 2-3 sentences, 35-60 words. Shorter and sharper beats longer: this is read on a phone at the table.
 - Never use "they" or "their" — names only.
 - Describe positions accurately: with ${players.length} players, only ${nth(players.length)} place is "last" — never call any other position "last", "dead last", or "the bottom".
 - Do not open with "In a…", "What a…", "Tonight…", or a restatement that a game of Wizard was played — start mid-story or with the most surprising number.`;

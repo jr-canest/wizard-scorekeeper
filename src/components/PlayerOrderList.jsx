@@ -7,14 +7,17 @@ import { useState, useRef, useEffect } from 'react';
 // `players` is the list to show (active players in seating order);
 // `allPlayers` is the full roster the reorder indices refer to. Window
 // listeners track the drag so it keeps working when the pointer leaves
-// the list (or a modal's scroll box).
+// the list (or a modal's scroll box). `onRemove` adds a remove button per
+// row (the caller confirms); a table needs at least 2 players.
 export default function PlayerOrderList({
   players,
   allPlayers,
   dealerId,
   totalScores,
   onReorderPlayers,
+  onRemove,
 }) {
+  const canRemove = players.length > 2;
   const [dragIndex, setDragIndex] = useState(null);
   const listRef = useRef(null);
   // Refs so the window listeners always see the latest props/state
@@ -109,6 +112,22 @@ export default function PlayerOrderList({
                 {total < 0 ? `−${Math.abs(total)}` : total}
               </span>
             </div>
+            {onRemove && (
+              <button
+                type="button"
+                // Keep the tap from starting a row drag
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                onClick={() => onRemove(player)}
+                disabled={!canRemove}
+                aria-label={`Remove ${player.name}`}
+                className="shrink-0 w-9 h-9 -mr-1 flex items-center justify-center text-navy-300 active:text-[#fda4af] disabled:opacity-30"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
           </div>
         );
       })}

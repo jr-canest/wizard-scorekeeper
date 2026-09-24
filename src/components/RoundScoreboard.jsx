@@ -13,6 +13,7 @@ import LastRoundToggle from './LastRoundToggle';
 // replaced by an End-game panel.
 export default function RoundScoreboard({
   players,
+  satOutPlayers = [],
   round,
   allRounds,
   totalScores,
@@ -31,9 +32,14 @@ export default function RoundScoreboard({
   onEditRound,
 }) {
   // Sort by total score descending for results
+  const byTotal = (a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0);
   const activePlayers = players
     .filter(p => p.id in round.scores)
-    .sort((a, b) => (totalScores[b.id] || 0) - (totalScores[a.id] || 0));
+    .sort(byTotal);
+  // Players removed mid-game keep their frozen total in the standings
+  // and their columns in the every-round table.
+  const standings = [...activePlayers, ...satOutPlayers].sort(byTotal);
+  const tablePlayers = [...activePlayers, ...satOutPlayers];
 
   // All completed rounds for the history table
   const completedRounds = allRounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
@@ -103,7 +109,27 @@ export default function RoundScoreboard({
           <span className="section-label text-center">Won</span>
           <span className="section-label text-right">Total</span>
         </div>
-        {activePlayers.map((player) => {
+        {standings.map((player) => {
+          if (!(player.id in round.scores)) {
+            return (
+              <div
+                key={player.id}
+                className="grid grid-cols-[1fr_38px_38px_80px] items-center px-3 py-[11px] border-b border-gold-300/10 last:border-0 opacity-60"
+              >
+                <span className="font-display font-semibold text-[17px] leading-none text-cream-bright min-w-0 truncate">
+                  {player.name}
+                </span>
+                <span className="text-sm text-navy-300 text-center">—</span>
+                <span className="text-sm text-navy-300 text-center">—</span>
+                <span className="text-right">
+                  <span className="block font-bold text-[18px] leading-none tabular-nums text-gold-text">
+                    {formatNum(totalScores[player.id] || 0)}
+                  </span>
+                  <span className="block mt-1 text-[10px] font-semibold leading-none text-navy-200">frozen</span>
+                </span>
+              </div>
+            );
+          }
           const score = round.scores[player.id] || 0;
           const bid = round.bids[player.id];
           const tricks = round.tricks[player.id];
@@ -249,7 +275,7 @@ export default function RoundScoreboard({
               <thead>
                 <tr className="border-b border-gold-300/20">
                   <th className="text-left text-navy-300 py-2 px-2 font-semibold sticky left-0 bg-[#131b32] z-10 text-[10px] uppercase tracking-[0.14em]">Rd</th>
-                  {activePlayers.map(p => (
+                  {tablePlayers.map(p => (
                     <th key={p.id} className="text-center py-2 px-2 font-display font-semibold text-[13px] text-cream min-w-[70px]">
                       {p.name}
                     </th>
@@ -264,7 +290,7 @@ export default function RoundScoreboard({
                     r.roundNumber === round.roundNumber ? 'bg-gold-300/5' : ''
                   }`}>
                     <td className="py-1.5 px-2 text-navy-300 sticky left-0 bg-[#131b32] z-10 font-semibold text-[12px] tabular-nums">{r.roundNumber}</td>
-                    {activePlayers.map(player => {
+                    {tablePlayers.map(player => {
                       const score = r.scores[player.id];
                       if (score === undefined) {
                         return <td key={player.id} className="py-1.5 px-2 text-center text-steel">—</td>;

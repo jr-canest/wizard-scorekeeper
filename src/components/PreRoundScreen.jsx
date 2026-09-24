@@ -19,6 +19,7 @@ export default function PreRoundScreen({
   onStartRound,
   onSelectTrump,
   onReorderPlayers,
+  onRemovePlayer,
   onDeclareLastRound,
   onUndeclareLastRound,
   onAddPlayer,
@@ -83,6 +84,7 @@ export default function PreRoundScreen({
           dealerId={dealer.id}
           totalScores={totalScores}
           onReorderPlayers={onReorderPlayers}
+          onRemove={onRemovePlayer}
         />
       </div>
 

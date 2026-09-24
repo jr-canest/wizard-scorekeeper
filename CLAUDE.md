@@ -157,6 +157,7 @@ wizard-scorekeeper/
 - **Drag-to-reorder players** — available on pre-round screen via touch/mouse drag handles
 - **End Game** — red-outline button on pre-round screen (calmer tint) and round results (both with confirm dialog). On a declared last round the gold End Game button ends immediately (no confirm)
 - **Add player mid-game** — optional starting points, joins current round immediately
+- **Remove player mid-game (2026-09-24)** — ✕ on each row of the Seating modal (and the pre-round list), with a confirm. `removePlayer` sets `removedInRound` (the next round from the results screen, the current one from pre-round): the player sits out from then on, skipped by the dealer rotation (`nextRoundDealerIndex` / `isSeatedIn` in `useGameState.js`), and their total FREEZES: it stays in the results-screen standings as a dimmed "frozen" row, in the every-round table ("—" for rounds sat out), in Scores, and in the final results + History. The player stays in `players[]` so every round's `dealerIndex` stays valid. `maxRounds` does not change on removal (the planned game length stays). The Seating modal offers Undo for a removal made on the same results screen. Needs 2+ players left
 - **Dealer rotation** — based on previous round's dealer + 1 (not formula), stays stable when players are added or reordered mid-game. Change Dealer button on pre-round screen for manual override
 - **Sticky phase status bar** (`PhaseStatusBar.jsx`) — during bidding and tricks, a sticky top bar titled "Round N · Bidding/Tricks" shows total vs cards dealt plus an over/under chip (red overbid / gold even / blue underbid; tricks: "Over by N" / "All in" / "N left"). Replaced the old bottom summary bands
 - **Auto-scroll** — entering a bid smooth-scrolls to the next player still missing one (wrapping); when everyone has bid it scrolls to the footer buttons. Tricks (2026-09-09) only auto-scroll while entries are made **in seating order** — each tap on the highlighted "won?" player glides to the next unset one. The first tap that skips ahead, or that raises a number a player already has (counting tricks live as they're won), switches the rest of the round to manual scrolling (`manualScrollRef` in `TricksPhase.jsx`); lowering a number counts as a correction and doesn't. Completing the total (auto-fill zeroes the rest) always scrolls to the Score button. Bidding and tricks screens open scrolled to top
@@ -229,7 +230,7 @@ games/{gameId}:
 - **Where it shows**: setup screen footer under the "test game" link, formatted `v2026.09.09 · 295a51d` (`formatVersion`)
 - **Update check** (`src/hooks/useUpdateCheck.js`): fetches `/version.json` with `cache: 'no-store'` on load, whenever the tab/PWA comes back to the foreground (`visibilitychange`), and every 5 min. Skipped in dev. Network errors are swallowed (offline mid-game must never surface anything)
 - **Banner** (`UpdateBanner.jsx`, mounted in `main.jsx` above `<App/>`): sticky 40px strip, `z-30`, not dismissable. While shown it sets `--update-banner-h` on `<body>` and `PhaseStatusBar` uses that as its sticky `top` so the two don't overlap. Fixed overlays (History, mid-game Scores) cover it; game-over is in normal flow so it shows there
-- **Update keeps the game**: game state is already in localStorage on every change. The button sets a one-shot `sessionStorage` flag (`markResumeAfterUpdate`) then `location.reload()`; `useGameState`'s mount effect consumes it (`consumeResumeAfterUpdate`) and hydrates the saved game directly instead of showing the "Resume your previous game?" prompt. A plain reload still shows the prompt
+- **Update keeps the game**: game state is already in localStorage on every change. The button sets a one-shot `sessionStorage` flag (`markResumeAfterUpdate`) then `location.reload()`; `useGameState`'s mount effect consumes it (`consumeResumeAfterUpdate`) and hydrates the saved game directly instead of showing the "Resume your previous game?" prompt. **Any refresh does the same (2026-09-24)**: a sessionStorage flag (`wizard-scorekeeper-in-game`, set whenever a game is loaded in the tab) or a `reload` navigation type skips the prompt, so pull-to-refresh, the reload button and Safari reloading a dropped background tab all land back in the game. The prompt only shows on a fresh open
 - **Hosting headers** (`firebase.json`): `/version.json` is `no-cache, no-store, must-revalidate`; `/index.html` is `no-cache` so a returning phone never boots a stale shell pointing at purged hashed assets
 
 ## Test Mode (hidden, works in production)
@@ -262,7 +263,7 @@ For previewing the game-over screen without playing a real game:
 
 ```javascript
 {
-  players: [{ id, name, addedInRound, startingPoints }],
+  players: [{ id, name, addedInRound, startingPoints, removedInRound? }], // removedInRound = first round sat out
   settings: { canadianRules, roundDirection: "ascending", firstDealerIndex },
   currentRound: 0,          // index into rounds array
   currentPhase: "preround",  // preround | bidding | tricks | scored | finished

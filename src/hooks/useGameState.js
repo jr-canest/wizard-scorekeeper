@@ -28,6 +28,57 @@ function saveState(state) {
   }
 }
 
+// A refresh (pull-to-refresh, the reload button, Safari reloading a tab
+// it dropped in the background) goes straight back into the game; the
+// "Resume your previous game?" prompt is only for a fresh open. The
+// sessionStorage flag survives reloads of this tab, the navigation type
+// covers the first reload after an update.
+const IN_GAME_KEY = 'wizard-scorekeeper-in-game';
+
+function wasInGameThisTab() {
+  try {
+    return sessionStorage.getItem(IN_GAME_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markInGameThisTab() {
+  try {
+    sessionStorage.setItem(IN_GAME_KEY, '1');
+  } catch {
+    // storage unavailable: the resume prompt still works
+  }
+}
+
+function isPageReload() {
+  try {
+    const nav = performance.getEntriesByType('navigation')[0];
+    return nav ? nav.type === 'reload' : performance.navigation?.type === 1;
+  } catch {
+    return false;
+  }
+}
+
+// A player sits in round N once they've joined and until they're
+// removed: removedInRound is the first round they sit out. Removed
+// players keep their place in players[] (so every round's dealerIndex
+// stays valid) and their frozen total stays in the standings.
+export function isSeatedIn(player, roundNumber) {
+  return player.addedInRound <= roundNumber &&
+    !(player.removedInRound != null && player.removedInRound <= roundNumber);
+}
+
+// The deal passes left: the next player after `fromIndex` who sits in
+// `roundNumber`.
+function nextSeatedIndex(players, fromIndex, roundNumber) {
+  for (let step = 1; step <= players.length; step++) {
+    const i = (fromIndex + step) % players.length;
+    if (isSeatedIn(players[i], roundNumber)) return i;
+  }
+  return (fromIndex + 1) % players.length;
+}
+
 // Choices made on the merged round-results screen for the round that
 // hasn't been created yet (dealer override, trump, last-round flag).
 // Consumed by buildNextRound when the next round is created.
@@ -37,6 +88,20 @@ function getNextSetup(state) {
   return { ...EMPTY_NEXT_SETUP, ...(state.nextRoundSetup || {}) };
 }
 
+// Who deals the round after the current one: the dealer picked on the
+// results screen, else the next seated player after this round's dealer.
+// Based on the previous round's dealer, not the formula, so rotation stays
+// stable when players are added, removed or reseated mid-game.
+export function nextRoundDealerIndex(state) {
+  const round = state.rounds[state.currentRound];
+  const nextNumber = round.roundNumber + 1;
+  const chosen = getNextSetup(state).dealerIndex;
+  if (chosen != null && state.players[chosen] && isSeatedIn(state.players[chosen], nextNumber)) {
+    return chosen;
+  }
+  return nextSeatedIndex(state.players, round.dealerIndex, nextNumber);
+}
+
 // Appends the next round to `prev` (dealer rotates from the previous
 // round's dealer unless overridden; extra rounds stay at max cards) and
 // clears the pending setup. Phase is left for the caller to set.
@@ -44,13 +109,7 @@ function buildNextRound(prev) {
   const setup = getNextSetup(prev);
   const newRoundIndex = prev.currentRound + 1;
   const cardsDealt = getCardsForRound(newRoundIndex, prev.maxRounds);
-  // Base next dealer on previous round's dealer + 1, not the formula —
-  // this keeps rotation stable when players are added mid-game.
-  const prevDealerIndex = prev.rounds[prev.currentRound].dealerIndex;
-  const dealerIndex =
-    setup.dealerIndex != null && setup.dealerIndex < prev.players.length
-      ? setup.dealerIndex
-      : (prevDealerIndex + 1) % prev.players.length;
+  const dealerIndex = nextRoundDealerIndex(prev);
 
   return {
     ...prev,
@@ -75,9 +134,10 @@ export function useGameState() {
   const [hasSavedGame, setHasSavedGame] = useState(false);
 
   useEffect(() => {
-    // One-shot flag set by the update banner before it reloads: skip the
-    // resume prompt and drop straight back into the game in progress.
-    const resumeNow = consumeResumeAfterUpdate();
+    // One-shot flag set by the update banner before it reloads, or any
+    // refresh of a tab that was in the game: skip the resume prompt and
+    // drop straight back into the game in progress.
+    const resumeNow = consumeResumeAfterUpdate() || wasInGameThisTab() || isPageReload();
     const saved = loadState();
     if (saved && saved.players && saved.players.length >= 2) {
       // Once-on-mount hydrate from localStorage — there's no
@@ -86,6 +146,10 @@ export function useGameState() {
       if (resumeNow) setGameState(saved); else setHasSavedGame(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (gameState) markInGameThisTab();
+  }, [gameState]);
 
   const resumeGame = useCallback(() => {
     const saved = loadState();
@@ -260,7 +324,56 @@ export function useGameState() {
       };
       const next = { ...prev };
       next.players = [...prev.players, newPlayer];
-      next.maxRounds = getMaxRounds(next.players.length);
+      next.maxRounds = getMaxRounds(next.players.filter(p => p.removedInRound == null).length);
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  // Someone leaves mid-game: they sit out from the round being set up
+  // (the next one from the results screen, the current one from the
+  // pre-round screen) and their total freezes; it still shows in the
+  // standings and counts in the final results. maxRounds stays put so
+  // the game length the table planned on doesn't shift.
+  const removePlayer = useCallback((playerId) => {
+    setGameState(prev => {
+      const idx = prev.players.findIndex(p => p.id === playerId);
+      if (idx < 0) return prev;
+      const isScored = prev.currentPhase === PHASES.SCORED;
+      const round = prev.rounds[prev.currentRound];
+      const fromRound = isScored ? round.roundNumber + 1 : round.roundNumber;
+      const players = prev.players.map(p => (p.id === playerId ? { ...p, removedInRound: fromRound } : p));
+      if (players.filter(p => isSeatedIn(p, fromRound)).length < 2) return prev;
+
+      const next = { ...prev, players };
+      if (isScored) {
+        // Picked as next dealer → the deal passes to the next seated player.
+        const setup = getNextSetup(prev);
+        if (setup.dealerIndex === idx) {
+          next.nextRoundSetup = { ...setup, dealerIndex: nextSeatedIndex(players, idx, fromRound) };
+        }
+      } else if (round.dealerIndex === idx) {
+        next.rounds = [...prev.rounds];
+        next.rounds[prev.currentRound] = { ...round, dealerIndex: nextSeatedIndex(players, idx, fromRound) };
+      }
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  // Undo a removal made on this same results screen (before the player
+  // has missed a round).
+  const restorePlayer = useCallback((playerId) => {
+    setGameState(prev => {
+      const next = {
+        ...prev,
+        players: prev.players.map(p => {
+          if (p.id !== playerId) return p;
+          const restored = { ...p };
+          delete restored.removedInRound;
+          return restored;
+        }),
+      };
       saveState(next);
       return next;
     });
@@ -412,6 +525,8 @@ export function useGameState() {
     declareLastRound,
     undeclareLastRound,
     addPlayerMidGame,
+    removePlayer,
+    restorePlayer,
     reorderPlayers,
     setDealer,
     addShamePoint,

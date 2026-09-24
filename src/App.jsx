@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useGameState } from './hooks/useGameState';
+import { useGameState, isSeatedIn, nextRoundDealerIndex } from './hooks/useGameState';
 import { useUIScale } from './hooks/useUIScale';
 import { PHASES } from './utils/constants';
 import SetupScreen from './components/SetupScreen';
@@ -16,6 +16,11 @@ import SeatingModal from './components/SeatingModal';
 import { getDemoScenario, getCurrentDemoName } from './utils/demoScenarios';
 import { getCardsForRound } from './utils/roundCalculations';
 import { warmSummaryFunction } from './utils/firebase';
+
+// True minus sign (U+2212) for negatives, per the 1b kit
+function formatTotal(n) {
+  return n < 0 ? `−${Math.abs(n)}` : `${n}`;
+}
 
 function WizardLogo({ className = "h-8" }) {
   return <img src={`${import.meta.env.BASE_URL}wizard-logo.svg`} alt="Wizard" className={className} />;
@@ -40,6 +45,8 @@ export default function App() {
     declareLastRound,
     undeclareLastRound,
     addPlayerMidGame,
+    removePlayer,
+    restorePlayer,
     reorderPlayers,
     setDealer,
     addShamePoint,
@@ -60,6 +67,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showDealerPicker, setShowDealerPicker] = useState(false);
   const [showSeating, setShowSeating] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(null);
 
   // Pre-warm the AI recap function as soon as the game is heading for its
   // end: the last round is declared (for this round or the next one), or
@@ -215,8 +223,13 @@ export default function App() {
   const dealer = gameState.players[round.dealerIndex];
   const isInExtraRounds = gameState.currentRound >= gameState.maxRounds;
 
-  // Active players for this round
-  const activePlayers = gameState.players.filter(p => p.addedInRound <= round.roundNumber);
+  // Active players for this round (joined, not removed)
+  const activePlayers = gameState.players.filter(p => isSeatedIn(p, round.roundNumber));
+  // Removed mid-game before this round: their frozen totals stay on the
+  // results screen (only players who actually played a round).
+  const satOutPlayers = gameState.players.filter(
+    p => p.removedInRound != null && p.removedInRound <= round.roundNumber && p.addedInRound < p.removedInRound
+  );
 
   // Merged results screen: the round just scored is on screen while the
   // NEXT round is being set up. Dealer / trump / last-round choices park
@@ -225,11 +238,7 @@ export default function App() {
   const isScored = gameState.currentPhase === PHASES.SCORED;
   const nextSetup = gameState.nextRoundSetup || {};
   const nextIndex = gameState.currentRound + 1;
-  const nextDealerIndex =
-    nextSetup.dealerIndex != null && gameState.players[nextSetup.dealerIndex]
-      ? nextSetup.dealerIndex
-      : (round.dealerIndex + 1) % gameState.players.length;
-  const nextDealer = gameState.players[nextDealerIndex] || gameState.players[0];
+  const nextDealer = gameState.players[nextRoundDealerIndex(gameState)] || gameState.players[0];
   const nextRoundInfo = {
     roundNumber: round.roundNumber + 1,
     cardsDealt: getCardsForRound(nextIndex, gameState.maxRounds),
@@ -243,7 +252,10 @@ export default function App() {
   // results screen (every player is in next round, including ones added
   // mid-game).
   const pickerDealer = isScored ? nextDealer : dealer;
-  const pickerPlayers = isScored ? gameState.players : activePlayers;
+  const nextRoundPlayers = gameState.players.filter(p => isSeatedIn(p, round.roundNumber + 1));
+  const pickerPlayers = isScored ? nextRoundPlayers : activePlayers;
+  // Removing a player takes effect in the round being set up.
+  const removeFromRound = isScored ? round.roundNumber + 1 : round.roundNumber;
 
   return (
     <div className="px-3.5 pb-4 max-w-md mx-auto">
@@ -283,6 +295,7 @@ export default function App() {
           onSelectTrump={() => setShowTrumpPicker(true)}
           allPlayers={gameState.players}
           onReorderPlayers={reorderPlayers}
+          onRemovePlayer={setConfirmRemove}
           onDeclareLastRound={declareLastRound}
           onUndeclareLastRound={undeclareLastRound}
           onAddPlayer={() => setShowAddPlayer(true)}
@@ -338,6 +351,7 @@ export default function App() {
       {gameState.currentPhase === PHASES.SCORED && (
         <RoundScoreboard
           players={activePlayers}
+          satOutPlayers={satOutPlayers}
           round={round}
           allRounds={gameState.rounds}
           totalScores={totalScores}
@@ -383,12 +397,25 @@ export default function App() {
 
       {showSeating && (
         <SeatingModal
-          players={gameState.players}
+          players={nextRoundPlayers}
           allPlayers={gameState.players}
           dealerId={nextDealer.id}
           totalScores={totalScores}
           onReorderPlayers={reorderPlayers}
+          onRemovePlayer={setConfirmRemove}
+          justRemoved={gameState.players.filter(p => p.removedInRound === round.roundNumber + 1)}
+          onRestorePlayer={restorePlayer}
           onClose={() => setShowSeating(false)}
+        />
+      )}
+
+      {confirmRemove && (
+        <ConfirmDialog
+          title={`Remove ${confirmRemove.name}?`}
+          message={`${confirmRemove.name} sits out from round ${removeFromRound} on. The score stays frozen at ${formatTotal(totalScores[confirmRemove.id] || 0)} and still counts in the standings and final results.`}
+          confirmLabel="Remove"
+          onConfirm={() => { removePlayer(confirmRemove.id); setConfirmRemove(null); }}
+          onCancel={() => setConfirmRemove(null)}
         />
       )}
 

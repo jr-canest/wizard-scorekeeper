@@ -3,8 +3,20 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 // Seating order for the next round, opened from the merged round-results
 // screen. Same hold-to-drag list as the pre-round screen; the dealer
-// badge shows who deals next (change it with the Dealer picker).
-export default function SeatingModal({ players, allPlayers, dealerId, totalScores, onReorderPlayers, onClose }) {
+// badge shows who deals next (change it with the Dealer picker). The ✕ on
+// a row removes that player from the next round on (score frozen);
+// `justRemoved` lists removals made on this screen, which can be undone.
+export default function SeatingModal({
+  players,
+  allPlayers,
+  dealerId,
+  totalScores,
+  onReorderPlayers,
+  onRemovePlayer,
+  justRemoved = [],
+  onRestorePlayer,
+  onClose,
+}) {
   useBodyScrollLock();
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -24,8 +36,23 @@ export default function SeatingModal({ players, allPlayers, dealerId, totalScore
             dealerId={dealerId}
             totalScores={totalScores}
             onReorderPlayers={onReorderPlayers}
+            onRemove={onRemovePlayer}
           />
         </div>
+        {justRemoved.map(p => {
+          const total = totalScores[p.id] || 0;
+          return (
+            <div key={p.id} className="flex items-center justify-between gap-2 mt-2.5 px-1.5 text-xs text-navy-200">
+              <span className="min-w-0 truncate">
+                <span className="font-semibold text-cream">{p.name}</span> sits out · frozen at{' '}
+                <span className="font-semibold tabular-nums text-cream">{total < 0 ? `−${Math.abs(total)}` : total}</span>
+              </span>
+              <button onClick={() => onRestorePlayer(p.id)} className="shrink-0 font-semibold text-gold-text active:opacity-70">
+                Undo
+              </button>
+            </div>
+          );
+        })}
         <button onClick={onClose} className="btn-gold w-full mt-3 h-11 text-[15px]">
           Done
         </button>

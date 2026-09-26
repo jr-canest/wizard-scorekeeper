@@ -275,7 +275,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     : (aiSummary || (stillAnalyzing ? null : fallbackSummary));
 
   return (
-    <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-svh' : ''}`}
+    <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-screen-z' : ''}`}
       style={{ background: 'linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%)' }}>
 
       {showWipe && <WhiteWipe />}

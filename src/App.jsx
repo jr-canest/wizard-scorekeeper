@@ -168,7 +168,7 @@ export default function App() {
   // Resume game prompt
   if (!gameState && hasSavedGame) {
     return (
-      <div className="min-h-svh flex items-center justify-center p-4">
+      <div className="min-h-screen-z flex items-center justify-center p-4">
         <div className="card-gold p-6 max-w-sm w-full text-center">
           <WizardLogo className="h-10 mx-auto mb-4" />
           <h2 className="font-display font-semibold text-[26px] leading-none text-cream-bright mb-2.5">Game in progress</h2>

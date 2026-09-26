@@ -54,16 +54,25 @@ body {
   background: linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%);
   background-attachment: fixed;
   color: #e5e7eb;
-  min-height: 100svh;
   /* The layout is designed for a phone (~380px). On iPad / desktop
-     useUIScale sets --ui-zoom to 1.0–2.4× so the same layout fills the
+     useUIScale sets --ui-zoom to 1.0–1.5× so the same layout fills the
      available space instead of sitting inside a narrow centered column.
      Matches the multiplayer app's behavior so the two feel similar. */
   zoom: var(--ui-zoom, 1);
+  /* Zoom multiplies every length inside the body, heights included, so
+     a plain 100svh became 1.5 screens on an iPad (half a screen of empty
+     page under every screen). One screen, in zoomed pixels: */
+  min-height: calc(100svh / var(--ui-zoom, 1));
 }
 
 #root {
-  min-height: 100svh;
+  min-height: calc(100svh / var(--ui-zoom, 1));
+}
+
+/* Full-screen-height blocks inside the zoomed body: use this, never
+   Tailwind's min-h-svh / min-h-screen (see the body rule above). */
+.min-h-screen-z {
+  min-height: calc(100svh / var(--ui-zoom, 1));
 }
 
 /* ─── Buttons ─── */

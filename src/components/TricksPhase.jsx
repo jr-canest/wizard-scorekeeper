@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getBiddingOrder } from '../utils/roundCalculations';
-import { playBooSound } from '../utils/sounds';
+import { playBooSound, playTrickSound } from '../utils/sounds';
 import { getBooPhrase } from '../utils/booPhrases';
 import ConfirmDialog from './ConfirmDialog';
 import BooToast from './BooToast';
@@ -39,6 +39,7 @@ export default function TricksPhase({ players, dealerId, cardsDealt, roundNumber
     const isBump = wasSet && n > tricks[playerId];
     if (!inOrder && (!wasSet || isBump)) manualScrollRef.current = true;
 
+    playTrickSound(n);
     onTrick(playerId, n);
     const after = { ...tricks, [playerId]: n };
     const sum = Object.values(after).reduce((s, t) => s + t, 0);

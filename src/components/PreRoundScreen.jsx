@@ -1,4 +1,5 @@
 import { SUITS } from '../utils/constants';
+import DealerBadge from './DealerBadge';
 import LastRoundToggle from './LastRoundToggle';
 import PlayerOrderList from './PlayerOrderList';
 
@@ -54,11 +55,10 @@ export default function PreRoundScreen({
         <div className="ornament">
           <span className="diamond" />
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-3.5 text-xs font-medium text-navy-200">
-          <span>
-            Dealer <span className="text-cream">{dealer.name}</span>
-          </span>
-          <span className="text-steel">·</span>
+        <div className="mt-3.5">
+          <DealerBadge name={dealer.name} />
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-2 text-xs font-medium text-navy-200">
           <span>
             {cardsDealt} card{cardsDealt !== 1 ? 's' : ''}
             {isExtraRound && <span className="text-gold-text ml-1">(max)</span>}

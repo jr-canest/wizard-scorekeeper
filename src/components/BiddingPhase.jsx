@@ -5,7 +5,7 @@ import BooToast from './BooToast';
 import PhaseStatusBar from './PhaseStatusBar';
 import RoundMeta from './RoundMeta';
 import LastRoundToggle from './LastRoundToggle';
-import { playBooSound } from '../utils/sounds';
+import { playBidSound, playBooSound } from '../utils/sounds';
 import { getBooPhrase } from '../utils/booPhrases';
 
 export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, shamePoints, trumpSuit, dealerName, onSelectTrump, isLastRound, onDeclareLastRound, onUndeclareLastRound, onBid, onShame, onConfirm, onBack }) {
@@ -23,6 +23,7 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
   // After a bid is entered, glide to the next player still missing one
   // (wrapping around); when everyone has bid, glide to the footer.
   function handleBid(playerId, n) {
+    playBidSound(n);
     onBid(playerId, n);
     const after = { ...bids, [playerId]: n };
     const idx = biddingOrder.findIndex(p => p.id === playerId);

@@ -53,6 +53,7 @@ wizard-scorekeeper/
     │   ├── SetupScreen.jsx      # Player names, drag reorder, dealer, Canadian rules, autocomplete
     │   ├── PreRoundScreen.jsx   # Pre-round (round 1 / back from bidding): seating list, Start/Trump/LastRound
     │   ├── PlayerOrderList.jsx  # Hold-to-drag seating list + dealer badge (PreRound + SeatingModal)
+    │   ├── DealerBadge.jsx      # Boxed "♛ DEALER  Name" at the top of pre-round / bidding / tricks
     │   ├── SeatingModal.jsx     # Seating order for the NEXT round, opened from the results screen
     │   ├── RoundHeader.jsx      # Compact header during bidding/tricks/scored
     │   ├── TrumpSelection.jsx   # Modal: suit picker with Wizard/Jester reminder
@@ -74,7 +75,7 @@ wizard-scorekeeper/
         ├── roundCalculations.js # Max rounds, cards per round, bid constraints
         ├── gameSummary.js       # Dynamic game-over summary with category detection
         ├── firebase.js          # Firebase config, Firestore CRUD (players, games)
-        ├── sounds.js            # Web Audio API sounds (boo, sparkle)
+        ├── sounds.js            # Web Audio API sounds (boo, sparkle, bid/trick chip taps)
         ├── booPhrases.js        # Randomized "BOO NAME BOO!" phrases for shame toast
         ├── demoScenarios.js     # Mock game-over data for ?demo=<name> preview mode
         ├── appVersion.js        # APP_VERSION build stamp, formatVersion, resume-after-update flag
@@ -129,7 +130,7 @@ wizard-scorekeeper/
   - **Typography rules (2026-08-20, applies to BOTH apps):** serif (`font-display`, Cormorant Garamond via Google Fonts) is for IDENTITY and NARRATIVE only — screen titles ("Round 3", "History"), player names, room codes, AI recap prose; never below 13px (smaller name contexts use sans). Sans (default) is for ALL DATA and UI: **every numeral** (always `tabular-nums`, semibold/bold), labels, buttons, chips, status words, metadata. Numerals are NEVER serif.
   - Kit tokens in `@theme`: `cream` #ece0c4, `cream-bright` #f7f0dd, `gold-text` #e2c579, `steel` #2e3a55; kit classes in index.css: `.btn-gold` (new lighter gradient, radius 8), `.btn-secondary`, `.btn-header`, `.btn-danger`, `.card-gold` (panel gradient + inset highlight), `.card-gold-active` (warm gold active), `.card-gold-subtle` (quiet row), `.chip`/`.chip-selected`/`.chip-locked`/`.chip-disabled` (number buttons), `.eyebrow`, `.section-label`, `.ornament` + `.diamond` (hairline ◆ rule), `.shame-chip`
   - NOTE: kit classes are unlayered CSS, so they beat Tailwind utilities — don't try to override e.g. `.chip` font-size with a `text-*` utility
-  - Shared 50px header: ghost text action · ◆ logo ◆ · "Scores" btn-header; title blocks = eyebrow + serif Round N + ornament + metadata row (`Trump ♥ Hearts · Dealer X · N cards`, trump tappable during rounds — `RoundMeta.jsx`; RoundHeader.jsx retired)
+  - Shared 50px header: ghost text action · ◆ logo ◆ · "Scores" btn-header; title blocks = eyebrow + serif Round N + ornament + boxed dealer + metadata row (`Trump ♥ Hearts · N cards`, trump tappable during rounds — `RoundMeta.jsx`; RoundHeader.jsx retired)
   - True minus sign − (U+2212) for all negative scores
   - Bid/trick chips: ≤6 values = one flex row of 44px chips; 7+ = 6-column grid of 38px chips (density frame 2c; 2d collapsed-rows variant NOT implemented)
   - `public/wizard-logo.svg` replaced with the handoff's gold-fill version (old one had undefined st0–st5 classes)
@@ -164,6 +165,8 @@ wizard-scorekeeper/
 - **Last Round toggle** (`LastRoundToggle.jsx`, shared) — on the pre-round screen and at the bottom of the bidding phase
 - **Micro-animations** (index.css, all ≤200ms, transform/opacity only, `prefers-reduced-motion` respected) — `.phase-enter` fade+rise on each stage mount, `.bid-pop` on a newly selected number, `.pop-in` on the status chip (keyed by text so it re-pops on change), `.card-gold-active` gold glow glides to the player awaiting input
 - **Tricks won colors** — green (exact match), red (miss) next to each player
+- **Boxed dealer (2026-09-26)** — `DealerBadge.jsx` puts `♛ DEALER  Name` in a gold-outlined box on its own centred line under the ornament on the pre-round, bidding and tricks screens (it used to be small print in the metadata row). Same square outline as the seating-list / Next-up dealer badges, with a stronger border + faint gold fill. The results screen's title row keeps the finished round's dealer as plain text so it doesn't compete with the boxed next-round dealer in the Next up panel
+- **Tap sounds (2026-09-26)** — every bid/trick chip tap plays a short synthesized note (`playBidSound` / `playTrickSound` in `sounds.js`), pitched by the number tapped: one G-major-pentatonic step per number, 0 = G4, capped at C7 from 12 up. Bids = soft mallet pluck (sine + fast-decaying 4th partial); tricks = band-passed-noise card snap + triangle note, so the phases sound different. Unlike boo/sparkle (new AudioContext per sound), taps share one long-lived context, resumed on each tap, since they fire several times a second and iOS caps open contexts. Auto-filled trick zeroes are silent. Peaks ≈ −10 dBFS (bids) / −13.5 dBFS (tricks), well under the boo. Web Audio, so an iPhone with the ring/silent switch on silent plays nothing (same as the boo)
 - **Wake lock** — Screen stays awake while app is open (Screen Wake Lock API)
 - **Round info** — Shows "[Dealer] deals X cards each" and "Y rounds left"
 - **Canadian Rules subtitle** shown when toggled on

@@ -1,4 +1,5 @@
 import { SUITS } from '../utils/constants';
+import { playStartRoundSound } from '../utils/sounds';
 import LastRoundToggle from './LastRoundToggle';
 
 // Round results + next-round setup on ONE screen (merged the old
@@ -219,7 +220,10 @@ export default function RoundScoreboard({
             </button>
           </div>
 
-          <button onClick={onStartNextRound} className="btn-gold w-full h-12 text-base">
+          <button
+            onClick={() => { playStartRoundSound(); onStartNextRound(); }}
+            className="btn-gold w-full h-12 text-base"
+          >
             Start round {next.roundNumber}
           </button>
 

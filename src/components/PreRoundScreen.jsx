@@ -1,4 +1,5 @@
 import { SUITS } from '../utils/constants';
+import { playStartRoundSound } from '../utils/sounds';
 import DealerBadge from './DealerBadge';
 import LastRoundToggle from './LastRoundToggle';
 import PlayerOrderList from './PlayerOrderList';
@@ -91,7 +92,10 @@ export default function PreRoundScreen({
       {/* Action buttons */}
       <div className="space-y-2.5">
         {/* Main action: Start Round */}
-        <button onClick={onStartRound} className="btn-gold w-full h-12 text-base">
+        <button
+          onClick={() => { playStartRoundSound(); onStartRound(); }}
+          className="btn-gold w-full h-12 text-base"
+        >
           Start round
         </button>
 

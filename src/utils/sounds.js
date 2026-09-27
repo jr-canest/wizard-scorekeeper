@@ -166,26 +166,84 @@ function bidVoice(ctx, dest, t, n) {
   last.onended = () => bus.disconnect();
 }
 
-function trickVoice(ctx, dest, t, n) {
-  const bus = tapBus(ctx, dest);
-  // Card snap: 40 ms of band-passed noise
+// Card snap: 40 ms of band-passed noise. Moving the band lets a run of
+// snaps (the start-round riffle) sound like different cards.
+function cardSnap(ctx, dest, t, freq = 2800, level = 0.6) {
   const snap = ctx.createBufferSource();
   snap.buffer = getNoiseBuffer(ctx);
   const band = ctx.createBiquadFilter();
   band.type = 'bandpass';
-  band.frequency.value = 2800;
+  band.frequency.value = freq;
   band.Q.value = 0.8;
   const snapGain = ctx.createGain();
-  snapGain.gain.setValueAtTime(0.6, t);
+  snapGain.gain.setValueAtTime(level, t);
   snapGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
   snap.connect(band);
   band.connect(snapGain);
-  snapGain.connect(bus);
+  snapGain.connect(dest);
   snap.start(t);
   snap.stop(t + 0.05);
+}
+
+function trickVoice(ctx, dest, t, n) {
+  const bus = tapBus(ctx, dest);
+  cardSnap(ctx, bus, t);
   // ...under the count, as a reedier triangle note
   const last = tone(ctx, bus, 'triangle', noteFor(n), t, 0.8, 0.22);
   last.onended = () => bus.disconnect();
+}
+
+// ─── Round cues ───
+// Start round and Confirm bids each fire once per round, on the same
+// shared context as the taps. Start round hangs on an open G fifth
+// ("ready?"); Confirm bids lands on C major, the chord the pentatonic
+// bid notes belong to, so the bids sound resolved.
+
+function startRoundVoice(ctx, dest, t) {
+  const bus = tapBus(ctx, dest);
+  // A riffle: seven card snaps ~24 ms apart, brightening and building
+  for (let i = 0; i < 7; i++) {
+    const at = t + i * 0.024 + Math.random() * 0.006;
+    const freq = 2200 + i * 250 + Math.random() * 300;
+    cardSnap(ctx, bus, at, freq, 0.4 + i * 0.06);
+  }
+  // ...then G4 + D5 ring out, with a faint G5 on top
+  const ring = t + 0.2;
+  tone(ctx, bus, 'sine', noteFor(0), ring, 0.6, 0.9);
+  tone(ctx, bus, 'sine', noteFor(3), ring, 0.45, 0.9);
+  const last = tone(ctx, bus, 'sine', noteFor(5), ring + 0.02, 0.15, 1);
+  last.onended = () => bus.disconnect();
+}
+
+function confirmBidsVoice(ctx, dest, t) {
+  const bus = tapBus(ctx, dest);
+  // The bid mallet rolls up C5 E5 G5 C6, 35 ms apart; the top C rings on
+  let last;
+  [2, 4, 5, 7].forEach((step, i) => {
+    const at = t + i * 0.035;
+    const f = noteFor(step);
+    last = tone(ctx, bus, 'sine', f, at, 0.55, i === 3 ? 0.8 : 0.6);
+    tone(ctx, bus, 'sine', f * 4, at, 0.2, 0.05);
+  });
+  last.onended = () => bus.disconnect();
+}
+
+export function playStartRoundSound() {
+  try {
+    const ctx = getTapContext();
+    if (ctx) startRoundVoice(ctx, ctx.destination, ctx.currentTime);
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function playConfirmBidsSound() {
+  try {
+    const ctx = getTapContext();
+    if (ctx) confirmBidsVoice(ctx, ctx.destination, ctx.currentTime);
+  } catch {
+    // Audio not supported
+  }
 }
 
 export function playBidSound(n) {

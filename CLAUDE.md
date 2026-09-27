@@ -75,7 +75,7 @@ wizard-scorekeeper/
         ├── roundCalculations.js # Max rounds, cards per round, bid constraints
         ├── gameSummary.js       # Dynamic game-over summary with category detection
         ├── firebase.js          # Firebase config, Firestore CRUD (players, games)
-        ├── sounds.js            # Web Audio API sounds (boo, sparkle, bid/trick chip taps)
+        ├── sounds.js            # Web Audio API sounds (boo, sparkle, bid/trick chip taps, start-round + confirm-bids cues)
         ├── booPhrases.js        # Randomized "BOO NAME BOO!" phrases for shame toast
         ├── demoScenarios.js     # Mock game-over data for ?demo=<name> preview mode
         ├── appVersion.js        # APP_VERSION build stamp, formatVersion, resume-after-update flag
@@ -167,6 +167,7 @@ wizard-scorekeeper/
 - **Tricks won colors** — green (exact match), red (miss) next to each player
 - **Boxed dealer (2026-09-26)** — `DealerBadge.jsx` puts `♛ DEALER  Name` in a gold-outlined box on its own centred line under the ornament on the pre-round, bidding and tricks screens (it used to be small print in the metadata row). Same square outline as the seating-list / Next-up dealer badges, with a stronger border + faint gold fill. The results screen's title row keeps the finished round's dealer as plain text so it doesn't compete with the boxed next-round dealer in the Next up panel
 - **Tap sounds (2026-09-26)** — every bid/trick chip tap plays a short synthesized note (`playBidSound` / `playTrickSound` in `sounds.js`), pitched by the number tapped: one G-major-pentatonic step per number, 0 = G4, capped at C7 from 12 up. Bids = soft mallet pluck (sine + fast-decaying 4th partial); tricks = band-passed-noise card snap + triangle note, so the phases sound different. Unlike boo/sparkle (new AudioContext per sound), taps share one long-lived context, resumed on each tap, since they fire several times a second and iOS caps open contexts. Auto-filled trick zeroes are silent. Peaks ≈ −10 dBFS (bids) / −13.5 dBFS (tricks), well under the boo. Web Audio, so an iPhone with the ring/silent switch on silent plays nothing (same as the boo)
+- **Round cues (2026-09-26):** **Start round** (the pre-round button and the results screen's "Start round N") plays a card riffle (7 band-passed snaps ~24 ms apart, brightening) into a ringing open fifth, G4 + D5 with a faint G5. **Confirm bids** rolls the bid mallet up a C major chord (C5 E5 G5 C6, 35 ms apart). Pitches come from the tap scale (`noteFor`), so the bids resolve into the chord. Same shared context as the taps, called from each button's onClick (the user gesture iOS needs to wake audio). Peaks ≈ −12 dBFS (start round; riffle ≈ −19) and −10 dBFS (confirm), level with the bid taps. Score round stays silent. Offline check recipe: strip `export` from sounds.js, load it into headless Chrome (puppeteer-core from the multiplayer repo + system Chrome) and call the `*Voice(ctx, dest, t)` functions on an OfflineAudioContext to measure peaks or write a WAV
 - **Wake lock** — Screen stays awake while app is open (Screen Wake Lock API)
 - **Round info** — Shows "[Dealer] deals X cards each" and "Y rounds left"
 - **Canadian Rules subtitle** shown when toggled on

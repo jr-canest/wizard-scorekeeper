@@ -5,7 +5,7 @@ import BooToast from './BooToast';
 import PhaseStatusBar from './PhaseStatusBar';
 import RoundMeta from './RoundMeta';
 import LastRoundToggle from './LastRoundToggle';
-import { playBidSound, playBooSound } from '../utils/sounds';
+import { playBidSound, playBooSound, playConfirmBidsSound } from '../utils/sounds';
 import { getBooPhrase } from '../utils/booPhrases';
 
 export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRules, roundNumber, bids, shamePoints, trumpSuit, dealerName, onSelectTrump, isLastRound, onDeclareLastRound, onUndeclareLastRound, onBid, onShame, onConfirm, onBack }) {
@@ -165,7 +165,7 @@ export default function BiddingPhase({ players, dealerId, cardsDealt, canadianRu
             Back
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => { playConfirmBidsSound(); onConfirm(); }}
             disabled={!allBidsEntered}
             className="btn-gold flex-1 h-12 text-base"
           >

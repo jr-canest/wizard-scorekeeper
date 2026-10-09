@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { shortName } from '../utils/shortName';
 import { isProduction } from '../utils/firebase';
 
 const LINE_COLORS = [
@@ -241,7 +242,12 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
   const svgWidth = 320;
   const svgHeight = 220;
   const leftPad = 0;
-  const rightPad = 45; // space for name + score labels
+  // Labels use shortName (a 20-character name ran off the card, 2026-10-09);
+  // the strip is sized to the widest one (10px semibold ≈ 6 units a char).
+  const labels = {};
+  for (const p of players) labels[p.id] = shortName(p.name, players.map((q) => q.name), 11);
+  const longestLabel = Math.max(0, ...Object.values(labels).map((l) => l.length));
+  const rightPad = Math.max(45, Math.min(80, 14 + longestLabel * 6));
   const topPad = 24;
   const bottomPad = 18;
   const chartWidth = svgWidth - leftPad - rightPad;
@@ -404,6 +410,20 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
     displayedLabelYRef.current[p.id] = next;
     labelPositions[p.id] = next;
   }
+  // The easing above advances one step per render, and renders come from
+  // the replay, so when it stopped the labels froze part way to their slots
+  // and two names could sit on top of each other (2026-10-09). A frame tick
+  // keeps them moving until they land.
+  const [, setSettleTick] = useState(0);
+  const labelsSettling = players.some((p) => {
+    const target = targetLabelPositions[p.id];
+    return target !== undefined && labelPositions[p.id] !== target;
+  });
+  useEffect(() => {
+    if (!labelsSettling || isPlaying) return;
+    const id = requestAnimationFrame(() => setSettleTick((n) => n + 1));
+    return () => cancelAnimationFrame(id);
+  });
 
   return (
     <div className="card-gold p-3 mb-4">
@@ -529,7 +549,7 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
                 fontSize="10" fontWeight="600"
                 dominantBaseline="auto"
               >
-                {p.name}
+                {labels[p.id]}
               </text>
               <text
                 x={x + 10} y={labelY + 10}

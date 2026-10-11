@@ -87,8 +87,12 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
   const startProgressRef = useRef(0);
 
   const totalRounds = completedRounds.length;
+  // 1.2 s a round, but never longer than 5 s in total (Jorge, 2026-09-22,
+  // ported from wizard-multiplayer 2026-10-10): a 15-round game replayed
+  // for 18 s. Short games keep their pace, long ones move faster.
   const SECONDS_PER_ROUND = 1.2;
-  const totalDuration = totalRounds * SECONDS_PER_ROUND * 1000;
+  const REPLAY_MAX_MS = 5000;
+  const totalDuration = Math.min(REPLAY_MAX_MS, totalRounds * SECONDS_PER_ROUND * 1000);
 
   // Stable colors per player
   const playerColors = useMemo(() => {
@@ -430,10 +434,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h3 className="text-gold-200 text-sm font-medium">Game Replay</h3>
+          <h3 className="text-gold-200 text-sm font-medium">Game replay</h3>
           <p className="text-navy-200/60 text-xs">
             {currentRoundLabel === 0
-              ? `Start of game • ${totalRounds} rounds`
+              ? `Start of game · ${totalRounds} rounds`
               : `Round ${currentRoundLabel} of ${totalRounds}`}
           </p>
         </div>

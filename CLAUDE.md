@@ -286,3 +286,14 @@ For previewing the game-over screen without playing a real game:
 ```
 
 localStorage key: `wizard-scorekeeper-state`
+
+## Parity with wizard-multiplayer (2026-10-29)
+
+Anything shared by the two apps changes in BOTH (Jorge: "all changes we made in multiplayer to always be in scorekeeper too"): design kit, History screen (`STATS_GRID` and row markup identical), icons, game-over moment, desktop sizing, Safari fixes. Ported 2026-10-29:
+- **Icons** are drawn SVG from `src/components/Icons.jsx` (same set as multiplayer's `Icons.tsx`); never a text glyph (✕ ← ↗ ⓘ, emoji) as a button icon: they sit off-centre and iPhones turn some into colour emoji.
+- **All-time stats list:** rank column 26px with the rank centred (two-digit ranks used to touch the name), chip line wraps instead of running under the rating, alias pill uses a drawn info icon.
+- **Game over** = `GameOverCrown.jsx` (copy of multiplayer's): warm gold glow from the top, the app's crown (gold disc ♛) drops onto "X wins!" (ties: "A & B win!"), flecks, sparkle sound on landing; standings count up last-to-first with a glow on the winner once on screen. Replaced the white wipe + emoji sparkles; the page title "Game over" is gone on that screen (the crown block carries it).
+- **Desktop:** `useUIScale` gives mouse computers a height-only 1.0 to 1.15 scale (was the phone layout blown up to 1.5x).
+- **Safari:** `html { background-color: #040913 }` so the page edge behind Safari's toolbar / overscroll is not white.
+- Not applicable here (multiplayer only): chat, typing, reactions, Leave game, trick table, sign-in.
+- Final visual check of phone-facing changes: the iOS Simulator's Mobile Safari (`?demo=close` shows the game over without saving).

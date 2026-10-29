@@ -12,6 +12,7 @@ import {
 import BarChartRace from './BarChartRace';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { computePodiumStats, ratingForPlayer } from '../utils/ratings';
+import { BackIcon, CloseIcon } from './Icons';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
@@ -32,7 +33,7 @@ const SORT_COLUMNS = [
 // sort arrow hangs outside the label (see the header button) so it never
 // widens a column, and the name column keeps the leftover.
 const STATS_GRID =
-  'grid grid-cols-[20px_minmax(0,1fr)_40px_40px_22px_24px_32px_34px] items-center';
+  'grid grid-cols-[26px_minmax(0,1fr)_40px_40px_22px_24px_32px_34px] items-center';
 
 // True minus sign (U+2212) for negatives, per the 1b kit
 function formatNum(n) {
@@ -256,9 +257,10 @@ export default function HistoryScreen({ onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="text-navy-200 text-2xl active:text-white px-2"
+            aria-label="Close"
+            className="w-10 h-10 -mr-2 flex items-center justify-center text-navy-200 active:text-white"
           >
-            ✕
+            <CloseIcon size={18} />
           </button>
         </div>
 
@@ -353,7 +355,7 @@ export default function HistoryScreen({ onClose }) {
                         i === 0 ? 'bg-gold-300/[.07]' : ''
                       }`}
                     >
-                      <span className={`text-sm font-bold ${i === 0 ? 'text-gold-text' : 'text-navy-200'}`}>
+                      <span className={`pr-1.5 text-center text-[13px] font-bold tabular-nums ${i === 0 ? 'text-gold-text' : 'text-navy-200'}`}>
                         {medal || `${i + 1}.`}
                       </span>
                       <div className="min-w-0">
@@ -364,7 +366,7 @@ export default function HistoryScreen({ onClose }) {
                           {player.name}
                         </div>
                         {((player.totalShamePoints || 0) > 0 || hasAliases) && (
-                          <div className="flex items-center gap-1 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1 mt-0.5">
                             {(player.totalShamePoints || 0) > 0 && (
                               <span className="shame-chip whitespace-nowrap">
                                 shame{player.totalShamePoints > 1 ? ` ×${player.totalShamePoints}` : ''}
@@ -373,9 +375,10 @@ export default function HistoryScreen({ onClose }) {
                             {hasAliases && (
                               <span
                                 title={`Also: ${player.aliases.join(', ')}`}
-                                className="shrink-0 text-[9px] leading-none px-1 py-0.5 rounded-full bg-navy-700/80 border border-gold-700/40 text-gold-200 font-normal tabular-nums"
+                                className="shrink-0 inline-flex items-center gap-[3px] text-[9px] leading-none px-1 py-0.5 rounded-full bg-navy-700/80 border border-gold-700/40 text-gold-200 font-normal tabular-nums"
                               >
-                                ⓘ {player.aliases.length}
+                                <svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="8" cy="8" r="6.5" /><path d="M8 7v4.5M8 4.6v.1" strokeLinecap="round" /></svg>
+                                {player.aliases.length}
                               </span>
                             )}
                           </div>
@@ -649,9 +652,10 @@ function DetailHeader({ title, subtitle, onBack, onClose }) {
           <button
             type="button"
             onClick={onBack}
-            className="text-navy-200 text-xs underline underline-offset-2"
+            className="inline-flex items-center gap-0.5 text-navy-200 text-xs underline underline-offset-2"
           >
-            ← back
+            <BackIcon size={10} />
+            back
           </button>
         )}
         {onClose && (
@@ -659,9 +663,9 @@ function DetailHeader({ title, subtitle, onBack, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-navy-200 text-sm px-2 py-0.5 rounded hover:bg-navy-700/60"
+            className="w-8 h-8 flex items-center justify-center text-navy-200 rounded hover:bg-navy-700/60"
           >
-            ✕
+            <CloseIcon />
           </button>
         )}
       </div>
@@ -909,9 +913,9 @@ function GameDetailOverlay({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="text-navy-200 text-sm px-2 py-0.5 rounded hover:bg-navy-700/60"
+              className="w-8 h-8 flex items-center justify-center text-navy-200 rounded hover:bg-navy-700/60"
             >
-              ✕
+              <CloseIcon />
             </button>
           )}
         </div>

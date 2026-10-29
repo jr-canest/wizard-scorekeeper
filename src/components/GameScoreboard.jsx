@@ -1,91 +1,14 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { getGameSummary, buildAISummaryPayload } from '../utils/gameSummary';
 import { playSparkleSound } from '../utils/sounds';
+import { CROWN_LANDS_MS, CountUp, CrownTitle, GoldWash, STANDINGS_START_MS, STANDINGS_STEP_MS } from './GameOverCrown';
 import { saveGameResult, deleteHistoryGame, fetchAISummary, updateGameSummary, isProduction } from '../utils/firebase';
 import { isDemoMode } from '../utils/demoScenarios';
 import { isTestMode } from '../utils/testMode';
 import BarChartRace from './BarChartRace';
+import { CloseIcon } from './Icons';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
-
-function WhiteWipe() {
-  return (
-    <div className="fixed inset-0 z-[60] pointer-events-none">
-      <style>{`
-        @keyframes wipe-in {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100%); }
-        }
-        .white-wipe {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(180deg,
-            transparent 0%,
-            rgba(255,255,255,0.3) 10%,
-            rgba(255,255,255,0.95) 30%,
-            white 50%,
-            rgba(255,255,255,0.95) 70%,
-            rgba(255,255,255,0.3) 90%,
-            transparent 100%
-          );
-          animation: wipe-in 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
-        }
-      `}</style>
-      <div className="white-wipe" />
-    </div>
-  );
-}
-
-const sparkleEmojis = ['🪄', '⭐', '✨'];
-
-function Sparkles() {
-  const [sparkles] = useState(() =>
-    Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      left: 5 + Math.random() * 90,
-      top: 5 + Math.random() * 85,
-      delay: Math.random() * 2,
-      duration: 0.6 + Math.random() * 0.8,
-      size: 20 + Math.random() * 24,
-      emoji: sparkleEmojis[i % sparkleEmojis.length],
-    }))
-  );
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-      <style>{`
-        @keyframes sparkle-pop {
-          0% { transform: scale(0); opacity: 0; }
-          20% { transform: scale(1.3); opacity: 1; }
-          50% { transform: scale(0.9); opacity: 0.9; }
-          70% { transform: scale(1.1); opacity: 0.7; }
-          100% { transform: scale(0); opacity: 0; }
-        }
-        .sparkle {
-          position: absolute;
-          animation: sparkle-pop var(--dur) ease-in-out var(--delay) both;
-          animation-iteration-count: 2;
-          line-height: 1;
-        }
-      `}</style>
-      {sparkles.map(s => (
-        <div
-          key={s.id}
-          className="sparkle"
-          style={{
-            left: `${s.left}%`,
-            top: `${s.top}%`,
-            fontSize: s.size,
-            '--delay': `${s.delay}s`,
-            '--dur': `${s.duration}s`,
-          }}
-        >
-          {s.emoji}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, savedGameId, onGameSaved, onKeepPlaying, onNewGame, onShowHistory }) {
   // Memoize derived arrays so downstream components (BarChartRace is 60fps)
@@ -100,9 +23,24 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
   );
   const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
-  const [showSparkles, setShowSparkles] = useState(false);
-  const [showWipe, setShowWipe] = useState(false);
   const [contentVisible, setContentVisible] = useState(!isGameOver);
+  // Game over: the standings count up (last place first) once they are on
+  // screen, as in wizard-multiplayer. null = not seen yet.
+  const standingsRef = useRef(null);
+  const [standingsBase, setStandingsBase] = useState(isGameOver ? null : -1);
+  useEffect(() => {
+    if (!isGameOver) return;
+    const mountedAt = Date.now();
+    const el = standingsRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setStandingsBase(0); return; }
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      setStandingsBase(Math.max(0, STANDINGS_START_MS - (Date.now() - mountedAt)));
+    }, { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [isGameOver]);
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
   const [showReplay, setShowReplay] = useState(isGameOver && completedRounds.length > 1);
   const hasSaved = useRef(false);
@@ -110,14 +48,10 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
   useEffect(() => {
     if (isGameOver) {
-      // Trigger the game-over wipe + sparkles sequence the moment the
-      // component is told the game ended.
-      setShowWipe(true);
-      setShowSparkles(true);
-      playSparkleSound();
-      const contentTimer = setTimeout(() => setContentVisible(true), 500);
-      const wipeTimer = setTimeout(() => setShowWipe(false), 1100);
-      const sparkleEnd = setTimeout(() => setShowSparkles(false), 3000);
+      // The crown moment (GameOverCrown.jsx): content fades in under the
+      // gold wash, the sparkle sound lands with the crown.
+      const contentTimer = setTimeout(() => setContentVisible(true), 150);
+      const soundTimer = setTimeout(() => playSparkleSound(), CROWN_LANDS_MS - 60);
 
       // Save game to Firebase (once). Demo and test modes skip this entirely.
       if (!hasSaved.current && !isDemoMode() && !isTestMode()) {
@@ -161,8 +95,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
 
       return () => {
         clearTimeout(contentTimer);
-        clearTimeout(wipeTimer);
-        clearTimeout(sparkleEnd);
+        clearTimeout(soundTimer);
       };
     }
     // Save / animation kicks off once at game-over. The other deps are
@@ -278,8 +211,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
     <div className={`${isGameOver ? '' : 'fixed inset-0 z-40'} overflow-auto ${isGameOver ? 'min-h-screen-z' : ''}`}
       style={{ background: 'linear-gradient(180deg, #0b1224 0%, #070d1c 55%, #040913 100%)' }}>
 
-      {showWipe && <WhiteWipe />}
-      {showSparkles && <Sparkles />}
+      {isGameOver && <GoldWash />}
 
       <div className={`p-4 max-w-md mx-auto transition-opacity duration-700 ${
         isGameOver && !contentVisible ? 'opacity-0' : 'opacity-100'
@@ -287,9 +219,12 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-display font-semibold text-[28px] leading-none text-cream-bright">
-              {isGameOver ? 'Game over' : 'Scoreboard'}
-            </h2>
+            {/* Game over: the crown block below carries the title. */}
+            {!isGameOver && (
+              <h2 className="font-display font-semibold text-[28px] leading-none text-cream-bright">
+                Scoreboard
+              </h2>
+            )}
             {isGameOver && saveStatus && (
               <p className={`text-xs mt-0.5 ${
                 saveStatus === 'saving' ? 'text-navy-200/50' :
@@ -311,13 +246,29 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
             {!isGameOver && (
               <button
                 onClick={onClose}
-                className="text-navy-200 text-2xl active:text-white px-2"
+                aria-label="Close"
+                className="w-10 h-10 -mr-2 flex items-center justify-center text-navy-200 active:text-white"
               >
-                ✕
+                <CloseIcon size={18} />
               </button>
             )}
           </div>
         </div>
+
+        {/* The crown moment: the app's crown drops onto the winner's name
+            (ties name everyone on top). */}
+        {isGameOver && (() => {
+          const top = sortedPlayers.filter((p) => (totalScores[p.id] || 0) === (totalScores[sortedPlayers[0]?.id] || 0));
+          const names = top.map((p) => p.name);
+          const title = names.length === 1
+            ? `${names[0]} wins!`
+            : `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]} win!`;
+          return (
+            <div className="mb-4">
+              <CrownTitle title={title} iWon={false} />
+            </div>
+          );
+        })()}
 
         {/* Bar Chart Race */}
         {isGameOver && showReplay && completedRounds.length > 1 && (
@@ -395,25 +346,30 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         )}
 
         {/* Standings */}
-        <div className="card-gold overflow-hidden mb-4">
+        <div ref={standingsRef} className="card-gold overflow-hidden mb-4">
           <div className="px-3 h-8 flex items-center border-b border-gold-300/20">
             <span className="section-label">
               {isGameOver ? 'Final standings' : 'Standings'}
             </span>
           </div>
-          {sortedPlayers.map((player) => {
+          {sortedPlayers.map((player, idx) => {
             const total = totalScores[player.id] || 0;
             // Shared rank: find first player with same score
             const rank = sortedPlayers.findIndex(p => (totalScores[p.id] || 0) === total);
             const isFirst = rank === 0 && total > 0;
             const medal = rank < 3 ? medalEmojis[rank] : null;
             const shame = shamePoints?.[player.id] || 0;
+            // -1 = mid-game scoreboard (no animation); null = not seen yet.
+            const animate = standingsBase !== -1;
+            const seen = standingsBase !== null;
+            const enterAt = (standingsBase ?? 0) + (sortedPlayers.length - 1 - idx) * STANDINGS_STEP_MS;
             return (
               <div
                 key={player.id}
+                style={animate && seen ? { animationDelay: isFirst ? `${enterAt}ms, ${enterAt + 300}ms` : `${enterAt}ms` } : undefined}
                 className={`flex items-center justify-between px-3 py-2.5 border-b border-gold-300/10 last:border-0 ${
                   isFirst ? 'bg-gold-300/[.07]' : ''
-                }`}
+                } ${!animate ? '' : !seen ? 'opacity-0' : isFirst ? 'wm-row-glow' : 'wm-row-in'}`}
               >
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-bold w-8 ${isFirst ? 'text-gold-text' : 'text-navy-200'}`}>
@@ -429,7 +385,7 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
                 <span className={`font-bold text-[22px] leading-none tabular-nums ${
                   total > 0 ? 'text-[#6ee7b7]' : total < 0 ? 'text-[#fda4af]' : 'text-cream'
                 }`}>
-                  {formatNum(total)}
+                  {animate ? (seen ? <CountUp value={total} delay={enterAt} format={formatNum} /> : formatNum(0)) : formatNum(total)}
                 </span>
               </div>
             );

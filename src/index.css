@@ -42,6 +42,13 @@
   --font-display: "Cormorant Garamond", Georgia, serif;
 }
 
+/* The page edge behind iPhone Safari's toolbar and its overscroll is the
+   html canvas, which showed white there (found in the multiplayer app in
+   the iOS Simulator, 2026-10-29). The gradient's bottom shade. */
+html {
+  background-color: #040913;
+}
+
 html, body {
   /* Prevents iOS rubber-band scrolling past the bottom of the page
      when the content fits inside the viewport. Otherwise you can pull

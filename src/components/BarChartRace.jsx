@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { shortName } from '../utils/shortName';
 import { isProduction } from '../utils/firebase';
+import { CloseIcon } from './Icons';
 
 const LINE_COLORS = [
   '#e6cc80', // gold
@@ -459,9 +460,10 @@ export default function BarChartRace({ players, completedRounds, onDone }) {
           {onDone && (
             <button
               onClick={onDone}
-              className="text-navy-200/40 text-xs active:text-white px-1"
+              aria-label="Close replay"
+              className="w-6 h-6 flex items-center justify-center text-navy-200/40 active:text-white"
             >
-              ✕
+              <CloseIcon size={10} />
             </button>
           )}
         </div>

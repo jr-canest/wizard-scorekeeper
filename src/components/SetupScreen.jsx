@@ -5,6 +5,7 @@ import { searchPlayers, isProduction } from '../utils/firebase';
 import { getDemoNames } from '../utils/demoScenarios';
 import { isTestMode } from '../utils/testMode';
 import { formatVersion } from '../utils/appVersion';
+import { CloseIcon, ExternalIcon, HistoryIcon } from './Icons';
 
 // Test mode preloads throwaway players so a test game is one tap away.
 // Nothing is saved in test mode, so these names never reach Firestore.
@@ -292,10 +293,10 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
               {players.length > MIN_PLAYERS && (
                 <button
                   onClick={() => removePlayer(i)}
-                  className="text-red-400/80 text-lg px-1 active:text-red-300"
+                  className="w-8 h-8 flex items-center justify-center text-red-400/80 active:text-red-300"
                   aria-label="Remove player"
                 >
-                  ✕
+                  <CloseIcon size={13} />
                 </button>
               )}
             </div>
@@ -353,17 +354,19 @@ export default function SetupScreen({ onStartGame, onShowHistory }) {
       {onShowHistory && (
         <button
           onClick={onShowHistory}
-          className="btn-secondary w-full mt-2.5 h-11 text-sm"
+          className="btn-secondary w-full mt-2.5 h-11 text-sm inline-flex items-center justify-center gap-2"
         >
-          📜 Player history
+          <HistoryIcon className="text-gold-200" />
+          Player history
         </button>
       )}
 
       <a
         href="https://wizard-multiplayer.web.app/"
-        className="btn-secondary flex items-center justify-center w-full mt-2.5 h-11 text-sm no-underline"
+        className="btn-secondary flex items-center justify-center gap-2 w-full mt-2.5 h-11 text-sm no-underline"
       >
-        ↗ Play multiplayer
+        <ExternalIcon className="text-gold-200" />
+        Play multiplayer
       </a>
 
       {/* Hidden test-mode link — barely visible, enters/exits a throwaway

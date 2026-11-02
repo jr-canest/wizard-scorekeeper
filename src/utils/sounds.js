@@ -1,6 +1,9 @@
+import { getAudioContext } from './audioKeepAlive';
+
 export function playBooSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const duration = 0.8;
 
     const osc1 = ctx.createOscillator();
@@ -38,7 +41,6 @@ export function playBooSound() {
     osc1.stop(ctx.currentTime + duration);
     osc2.stop(ctx.currentTime + duration);
 
-    setTimeout(() => ctx.close(), (duration + 0.5) * 1000);
   } catch {
     // Audio not supported
   }
@@ -46,7 +48,8 @@ export function playBooSound() {
 
 export function playSparkleSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     // Magical ascending chime — 4 quick notes with shimmer
@@ -85,34 +88,23 @@ export function playSparkleSound() {
     shimmer.start(now + 0.3);
     shimmer.stop(now + 1.5);
 
-    setTimeout(() => ctx.close(), 2000);
   } catch {
     // Audio not supported
   }
 }
 
 // ─── Bid / trick chip taps ───
-// These fire on every number tap, often several a second, so they share
-// one long-lived AudioContext instead of the create-and-close pattern
-// above (iOS Safari caps how many contexts a page can open). Both are
-// pitched by the number tapped, one pentatonic note per step (0 = G4,
-// capped at C7 from 12 up), so a big bid audibly sounds bigger. Bids are
-// a soft mallet pluck; tricks lead with a card snap so the two phases
-// sound different.
+// These fire on every number tap, often several a second, so every sound
+// shares one long-lived AudioContext (iOS Safari caps how many contexts a
+// page can open). It comes from audioKeepAlive.ts (vendored from
+// Apps/_shared, edit it there): revived after the phone sleeps or the app
+// comes back, and replaced inside the next tap when iOS leaves it stuck.
+// Bid and trick taps are pitched by the number tapped, one pentatonic note
+// per step (0 = G4, capped at C7 from 12 up), so a big bid audibly sounds
+// bigger. Bids are a soft mallet pluck; tricks lead with a card snap so the
+// two phases sound different.
 
-let tapCtx = null;
 let noiseBuffer = null;
-
-function getTapContext() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return null;
-  if (!tapCtx) tapCtx = new AudioCtx();
-  // Starts suspended under autoplay rules, and iOS suspends/"interrupts"
-  // it when the tab is backgrounded; the tap calling this is the user
-  // gesture that's allowed to wake it back up.
-  if (tapCtx.state !== 'running') tapCtx.resume().catch(() => {});
-  return tapCtx;
-}
 
 const PENTATONIC = [0, 2, 5, 7, 9]; // G A C D E, in semitones above G
 
@@ -230,7 +222,7 @@ function confirmBidsVoice(ctx, dest, t) {
 
 export function playStartRoundSound() {
   try {
-    const ctx = getTapContext();
+    const ctx = getAudioContext();
     if (ctx) startRoundVoice(ctx, ctx.destination, ctx.currentTime);
   } catch {
     // Audio not supported
@@ -239,7 +231,7 @@ export function playStartRoundSound() {
 
 export function playConfirmBidsSound() {
   try {
-    const ctx = getTapContext();
+    const ctx = getAudioContext();
     if (ctx) confirmBidsVoice(ctx, ctx.destination, ctx.currentTime);
   } catch {
     // Audio not supported
@@ -248,7 +240,7 @@ export function playConfirmBidsSound() {
 
 export function playBidSound(n) {
   try {
-    const ctx = getTapContext();
+    const ctx = getAudioContext();
     if (ctx) bidVoice(ctx, ctx.destination, ctx.currentTime, n);
   } catch {
     // Audio not supported
@@ -257,7 +249,7 @@ export function playBidSound(n) {
 
 export function playTrickSound(n) {
   try {
-    const ctx = getTapContext();
+    const ctx = getAudioContext();
     if (ctx) trickVoice(ctx, ctx.destination, ctx.currentTime, n);
   } catch {
     // Audio not supported

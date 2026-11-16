@@ -57,6 +57,18 @@ function buildCanonicalMaps(players) {
 }
 
 /**
+ * One person against computers only (multiplayer): a practice game. Kept
+ * out of History and the ratings (Jorge, 2026-11-16); two or more people
+ * with a computer at the table is a real game and shows. The multiplayer
+ * app no longer saves these, this covers any that were.
+ */
+export function isSoloComputerGame(game) {
+  const results = Array.isArray(game?.results) ? game.results : [];
+  const computers = results.filter((r) => r.bot).length;
+  return computers > 0 && results.length - computers < 2;
+}
+
+/**
  * Aggregate podium finishes + points per canonical player id from the
  * fetched game docs.
  *
@@ -73,6 +85,7 @@ export function computePodiumStats(players, games) {
   };
 
   for (const game of games || []) {
+    if (isSoloComputerGame(game)) continue;
     const results = Array.isArray(game?.results) ? game.results : [];
     const playerCount = game.playerCount || results.length;
     for (const r of results) {

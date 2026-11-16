@@ -298,3 +298,5 @@ Anything shared by the two apps changes in BOTH (Jorge: "all changes we made in 
 - **Safari:** `html { background-color: #040913 }` so the page edge behind Safari's toolbar / overscroll is not white.
 - Not applicable here (multiplayer only): chat, typing, reactions, Leave game, trick table, sign-in.
 - Final visual check of phone-facing changes: the iOS Simulator's Mobile Safari (`?demo=close` shows the game over without saving).
+
+- **Practice games hidden (2026-11-16, parity with multiplayer):** a multiplayer game with ONE person against computers is practice. Multiplayer no longer saves those; `isSoloComputerGame` in `src/utils/ratings.js` also drops any that are on file from Past games and the ratings. Two or more people with a computer at the table show as before (`CPU · level` chip).

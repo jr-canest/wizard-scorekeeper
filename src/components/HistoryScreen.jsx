@@ -11,7 +11,7 @@ import {
 } from '../utils/firebase';
 import BarChartRace from './BarChartRace';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
-import { computePodiumStats, ratingForPlayer } from '../utils/ratings';
+import { computePodiumStats, isSoloComputerGame, ratingForPlayer } from '../utils/ratings';
 import { BackIcon, CloseIcon } from './Icons';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
@@ -130,7 +130,9 @@ export default function HistoryScreen({ onClose }) {
       Promise.all([getAllPlayers(), getRecentGames(300)]),
       timeout,
     ])
-      .then(([p, g]) => {
+      .then(([p, all]) => {
+        // One person vs computers is practice: not shown, not rated.
+        const g = all.filter((game) => !isSoloComputerGame(game));
         setPlayers(p);
         setPodium(computePodiumStats(p, g));
         setGames(g.slice(0, 30));

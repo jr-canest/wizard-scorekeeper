@@ -208,6 +208,7 @@ export default function App() {
           settings={gameState.settings}
           isGameOver
           savedGameId={gameState.savedGameId}
+          savedGameSig={gameState.savedGameSig}
           onGameSaved={recordSavedGame}
           onKeepPlaying={keepPlaying}
           onNewGame={newGame}

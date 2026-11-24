@@ -10,7 +10,7 @@ import { CloseIcon } from './Icons';
 
 const medalEmojis = ['🥇', '🥈', '🥉'];
 
-export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, savedGameId, onGameSaved, onKeepPlaying, onNewGame, onShowHistory }) {
+export default function GameScoreboard({ players, rounds, totalScores, shamePoints, settings, onClose, isGameOver, savedGameId, savedGameSig, onGameSaved, onKeepPlaying, onNewGame, onShowHistory }) {
   // Memoize derived arrays so downstream components (BarChartRace is 60fps)
   // don't bust their useMemo caches on every parent render.
   const sortedPlayers = useMemo(
@@ -70,11 +70,27 @@ export default function GameScoreboard({ players, rounds, totalScores, shamePoin
         // Pass completedRounds + players so the saved doc carries the
         // round-by-round data (bids, tricks, scores per name) — the
         // History → game detail modal renders the chart + table from it.
+        // Same finished game shown again (page reloaded, app reopened,
+        // "Resume your previous game?"): it is already in History, so
+        // saving again would add a copy. Only a changed result (Keep
+        // Playing / edit round, then End Game) is saved anew.
+        const sig = JSON.stringify([
+          completedRounds.length,
+          playerResults.map((r) => [r.name, r.score, r.shamePoints]),
+        ]);
+        if (savedGameId && savedGameSig === sig) {
+          gameIdRef.current = savedGameId;
+          setSaveStatus('saved');
+          return () => {
+            clearTimeout(contentTimer);
+            clearTimeout(soundTimer);
+          };
+        }
         saveGameResult(playerResults, completedRounds.length, completedRounds, players)
           .then((res) => {
             gameIdRef.current = res?.gameId ?? null;
             setSaveStatus('saved');
-            onGameSaved?.(res?.gameId ?? null);
+            onGameSaved?.(res?.gameId ?? null, sig);
             // This game was already saved once (ended, then reopened via
             // Keep Playing / edit round, then ended again). The fresh doc
             // above replaces the stale one — deleting it also rolls its

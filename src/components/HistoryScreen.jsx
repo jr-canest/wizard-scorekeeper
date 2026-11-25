@@ -1023,17 +1023,27 @@ function RoundBreakdownTable({ breakdown, playerOrder }) {
     <div className="rounded-md bg-navy-900/50 border border-gold-700/30 p-2.5">
       <p className="section-label mb-1.5">Round-by-round</p>
       <div className="overflow-x-auto -mx-0.5">
-        <table className="w-full text-[11px] tabular-nums">
+        {/* Fixed layout: equal player columns (a long name used to widen its own). */}
+        <table
+          className="w-full table-fixed text-[11px] tabular-nums"
+          style={{ minWidth: 22 + playerOrder.length * 44 }}
+        >
+          <colgroup>
+            <col style={{ width: 22 }} />
+            {playerOrder.map((n) => (
+              <col key={n} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="text-navy-300">
               <th className="text-left font-normal pr-1 sticky left-0 bg-navy-900/50 z-10 text-[10px] uppercase tracking-[0.12em]">R</th>
               {playerOrder.map((n) => (
                 <th
                   key={n}
-                  className="font-semibold text-[11px] text-cream px-1 text-right truncate max-w-[60px]"
+                  className="font-semibold text-[11px] text-cream px-1 text-right"
                   title={n}
                 >
-                  {n.length > 6 ? `${n.slice(0, 5)}…` : n}
+                  <span className="block truncate">{n.length > 6 ? `${n.slice(0, 5)}…` : n}</span>
                 </th>
               ))}
             </tr>

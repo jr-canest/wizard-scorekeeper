@@ -1,4 +1,4 @@
-import { useRolledNumber } from '../utils/standingsReveal';
+import { REVEAL_LINE_MS, useRolledNumber } from '../utils/standingsReveal';
 
 // The pieces of the round-results reveal, twins of the multiplayer app's
 // RoundStandings.tsx (keep the two in step): the places-moved badge, the
@@ -40,7 +40,7 @@ export function RoundCommentary({ lines, animate }) {
       {lines.map((l, i) => (
         <p
           key={i}
-          style={{ animationDelay: `${i * 420}ms` }}
+          style={{ animationDelay: `${REVEAL_LINE_MS[i] ?? 0}ms` }}
           className={`round-quip min-h-[26px] ${animate ? 'round-quip-in' : ''}`}
         >
           <span className="font-display font-semibold text-[17px] leading-tight text-cream-bright">

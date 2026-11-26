@@ -2,7 +2,7 @@ import { SUITS } from '../utils/constants';
 import { playStartRoundSound } from '../utils/sounds';
 import LastRoundToggle from './LastRoundToggle';
 import { rankByTotal, roundCommentary } from '../utils/roundCommentary';
-import { useStandingsReveal } from '../utils/standingsReveal';
+import { REVEAL_LINE_MS, useStandingsReveal } from '../utils/standingsReveal';
 import { MoveBadge, RolledNumber, RoundCommentary } from './RoundReveal';
 import { playQuip, playRevealMove, playRevealPoints } from '../utils/revealSounds';
 
@@ -90,7 +90,7 @@ export default function RoundScoreboard({
     afterStandings.map((p) => p.id),
     (st, rowsMove) => {
       // One sound per line, in step with the lines' own stagger.
-      if (st === 0) commentary.forEach((l, i) => window.setTimeout(() => playQuip(l.tone), 120 + i * 420));
+      if (st === 0) commentary.forEach((l, i) => window.setTimeout(() => playQuip(l.tone), REVEAL_LINE_MS[i] ?? 0));
       if (st === 1) playRevealPoints();
       if (st === 2 && rowsMove) playRevealMove();
     },

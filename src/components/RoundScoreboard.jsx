@@ -84,15 +84,15 @@ export default function RoundScoreboard({
   );
   const cheered = commentary.find((l) => l.tone === 'up')?.player;
   const roasted = commentary.find((l) => l.tone === 'down')?.player;
-  const { stage, order, listRef } = useStandingsReveal(
+  const { stage, instant, order, listRef } = useStandingsReveal(
     `${players.map((p) => p.id).sort().join('')}:${round.roundNumber}`,
     beforeStandings.map((p) => p.id),
     afterStandings.map((p) => p.id),
     (st, rowsMove) => {
+      // One sound per line, in step with the lines' own stagger.
+      if (st === 0) commentary.forEach((l, i) => window.setTimeout(() => playQuip(l.tone), 120 + i * 420));
       if (st === 1) playRevealPoints();
       if (st === 2 && rowsMove) playRevealMove();
-      // One sound per line, in step with the lines' own stagger.
-      if (st === 3) commentary.forEach((l, i) => window.setTimeout(() => playQuip(l.tone), i * 420));
     },
   );
   const byId = Object.fromEntries(standings.map((p) => [p.id, p]));
@@ -155,7 +155,7 @@ export default function RoundScoreboard({
         </div>
       </div>
 
-      <RoundCommentary lines={commentary} show={stage >= 3} />
+      <RoundCommentary lines={commentary} animate={!instant} />
 
       {/* Current round detail — grid panel */}
       <div className="card-gold overflow-hidden mb-4">

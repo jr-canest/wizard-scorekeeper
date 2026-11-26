@@ -26,21 +26,22 @@ export function RolledNumber({ from, to, run, format }) {
 }
 
 /**
- * The cheer and the roast, in a box of their own. The box holds its space
- * from the start (so nothing below jumps) and fades in with the lines.
+ * The cheer and the roast, in a box of their own. They are there from the
+ * first frame (popping in on the first showing only): the commentary leads
+ * and the table below then acts it out, so the box is never empty.
  */
-export function RoundCommentary({ lines, show }) {
+export function RoundCommentary({ lines, animate }) {
   if (!lines.length) return null;
   return (
     <div
-      className={`round-quip-box card-gold px-3.5 py-3 mb-4 space-y-1.5 transition-opacity duration-300 ${show ? 'opacity-100' : 'opacity-0'}`}
+      className="round-quip-box card-gold px-3.5 py-3 mb-4 space-y-1.5"
       aria-live="polite"
     >
       {lines.map((l, i) => (
         <p
           key={i}
           style={{ animationDelay: `${i * 420}ms` }}
-          className={`round-quip min-h-[26px] ${show ? 'round-quip-in' : 'opacity-0'}`}
+          className={`round-quip min-h-[26px] ${animate ? 'round-quip-in' : ''}`}
         >
           <span className="font-display font-semibold text-[17px] leading-tight text-cream-bright">
             {l.segs.map((s, j) =>

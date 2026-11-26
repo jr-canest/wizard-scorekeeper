@@ -1,6 +1,9 @@
 import { SUITS } from '../utils/constants';
 import { playStartRoundSound } from '../utils/sounds';
 import LastRoundToggle from './LastRoundToggle';
+import { rankByTotal, roundCommentary } from '../utils/roundCommentary';
+import { useStandingsReveal } from '../utils/standingsReveal';
+import { MoveBadge, RolledNumber, RoundCommentary } from './RoundReveal';
 
 // Round results + next-round setup on ONE screen (merged the old
 // "Scored" and "Pre-round" screens, 2026-09-02). Top to bottom:
@@ -44,6 +47,49 @@ export default function RoundScoreboard({
 
   // All completed rounds for the history table
   const completedRounds = allRounds.filter(r => r.scores && Object.keys(r.scores).length > 0);
+
+  // ── The reveal (2026-11-26, twin of the multiplayer app's): rows start
+  // in the order the table stood BEFORE this round with those totals, the
+  // round's points land and the totals roll, the rows slide to their new
+  // places, then a cheer and a roast pop in above. Once per round.
+  const deltaOf = (p) => (p.id in round.scores ? round.scores[p.id] || 0 : 0);
+  const beforeOf = (p) => (totalScores[p.id] || 0) - deltaOf(p);
+  const seatOf = (p) => tablePlayers.indexOf(p);
+  const beforeStandings = [...standings].sort((a, b) => beforeOf(b) - beforeOf(a) || seatOf(a) - seatOf(b));
+  const afterStandings = [...standings].sort((a, b) => byTotal(a, b) || seatOf(a) - seatOf(b));
+  const totalsAfter = {};
+  const totalsBefore = {};
+  for (const p of standings) { totalsAfter[p.id] = totalScores[p.id] || 0; totalsBefore[p.id] = beforeOf(p); }
+  const rankAfter = rankByTotal(totalsAfter);
+  const rankBefore = rankByTotal(totalsBefore);
+  const firstRound = standings.every((p) => beforeOf(p) === 0);
+  const earlier = completedRounds.filter((r) => r.roundNumber < round.roundNumber);
+  const commentary = roundCommentary(
+    `${players.map((p) => p.id).sort().join('')}`,
+    round.roundNumber,
+    activePlayers.map((p) => {
+      const made = round.tricks[p.id] === round.bids[p.id];
+      let streak = 1;
+      for (let i = earlier.length - 1; i >= 0; i--) {
+        const d = earlier[i].scores?.[p.id];
+        if (d === undefined || d > 0 !== made) break;
+        streak++;
+      }
+      return {
+        name: p.name, delta: deltaOf(p), total: totalScores[p.id] || 0, bid: round.bids[p.id] ?? 0, won: round.tricks[p.id] ?? 0,
+        madeStreak: made ? streak : 0, missStreak: made ? 0 : streak,
+      };
+    }),
+  );
+  const cheered = commentary.find((l) => l.tone === 'up')?.player;
+  const roasted = commentary.find((l) => l.tone === 'down')?.player;
+  const { stage, order, listRef } = useStandingsReveal(
+    `${players.map((p) => p.id).sort().join('')}:${round.roundNumber}`,
+    beforeStandings.map((p) => p.id),
+    afterStandings.map((p) => p.id),
+  );
+  const byId = Object.fromEntries(standings.map((p) => [p.id, p]));
+  const shownStandings = order.map((id) => byId[id]).filter(Boolean);
 
   // Compute running totals per round
   function getRunningTotal(playerId, upToRoundIndex) {
@@ -102,6 +148,8 @@ export default function RoundScoreboard({
         </div>
       </div>
 
+      <RoundCommentary lines={commentary} show={stage >= 3} />
+
       {/* Current round detail — grid panel */}
       <div className="card-gold overflow-hidden mb-4">
         <div className="grid grid-cols-[1fr_38px_38px_80px] items-center px-3 h-8 border-b border-gold-300/20">
@@ -110,12 +158,14 @@ export default function RoundScoreboard({
           <span className="section-label text-center">Won</span>
           <span className="section-label text-right">Total</span>
         </div>
-        {standings.map((player) => {
+        <div ref={listRef} className="relative">
+        {shownStandings.map((player) => {
           if (!(player.id in round.scores)) {
             return (
               <div
                 key={player.id}
-                className="grid grid-cols-[1fr_38px_38px_80px] items-center px-3 py-[11px] border-b border-gold-300/10 last:border-0 opacity-60"
+                data-row-id={player.id}
+                className="standing-row grid grid-cols-[1fr_38px_38px_80px] items-center px-3 py-[11px] border-b border-gold-300/10 last:border-0 opacity-60"
               >
                 <span className="font-display font-semibold text-[17px] leading-none text-cream-bright min-w-0 truncate">
                   {player.name}
@@ -138,13 +188,18 @@ export default function RoundScoreboard({
           const shame = shamePoints?.[player.id] || 0;
           const hit = tricks === bid;
 
+          const move = firstRound ? 0 : rankBefore[player.id] - rankAfter[player.id];
           return (
             <div
               key={player.id}
-              className="grid grid-cols-[1fr_38px_38px_80px] items-center px-3 py-[11px] border-b border-gold-300/10 last:border-0"
+              data-row-id={player.id}
+              className={`standing-row grid grid-cols-[1fr_38px_38px_80px] items-center px-3 py-[11px] border-b border-gold-300/10 last:border-0 ${
+                stage >= 3 && player.name === cheered ? 'standing-cheer' : ''
+              } ${stage >= 3 && player.name === roasted ? 'standing-roast' : ''}`}
             >
               <span className="font-display font-semibold text-[17px] leading-none text-cream-bright flex items-center gap-2 min-w-0">
                 <span className="truncate">{player.name}</span>
+                {stage >= 2 && move !== 0 && <MoveBadge move={move} />}
                 {shame > 0 && (
                   <span className="shame-chip shrink-0">shame{shame > 1 ? ` ×${shame}` : ''}</span>
                 )}
@@ -157,9 +212,9 @@ export default function RoundScoreboard({
               </span>
               <span className="text-right">
                 <span className="block font-bold text-[18px] leading-none tabular-nums text-gold-text">
-                  {formatNum(total)}
+                  <RolledNumber from={total - score} to={total} run={stage >= 1} format={formatNum} />
                 </span>
-                <span className={`block mt-1 text-[10px] font-semibold leading-none ${
+                <span className={`block mt-1 text-[10px] font-semibold leading-none ${stage >= 1 ? 'standing-delta-in' : 'opacity-0'} ${
                   score > 0 ? 'text-[#6ee7b7]' : score < 0 ? 'text-[#fda4af]' : 'text-navy-200'
                 }`}>
                   {formatDelta(score)}
@@ -168,6 +223,7 @@ export default function RoundScoreboard({
             </div>
           );
         })}
+        </div>
       </div>
 
       {isLastRound ? (

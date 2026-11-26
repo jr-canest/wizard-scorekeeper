@@ -1,0 +1,61 @@
+import { useRolledNumber } from '../utils/standingsReveal';
+
+// The pieces of the round-results reveal, twins of the multiplayer app's
+// RoundStandings.tsx (keep the two in step): the places-moved badge, the
+// rolling total and the commentary lines.
+
+/** Places gained or lost: a small drawn arrow and the count. */
+export function MoveBadge({ move }) {
+  const up = move > 0;
+  return (
+    <span
+      className={`standing-badge-in shrink-0 inline-flex items-center gap-[2px] font-sans text-[10px] font-bold tabular-nums leading-none ${up ? 'text-[#6ee7b7]' : 'text-[#fda4af]'}`}
+      aria-label={`${up ? 'up' : 'down'} ${Math.abs(move)}`}
+    >
+      <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true">
+        <path d={up ? 'M4 1l3.5 6h-7z' : 'M4 7L.5 1h7z'} />
+      </svg>
+      {Math.abs(move)}
+    </span>
+  );
+}
+
+/** A total that rolls from the old score to the new once `run` is true. */
+export function RolledNumber({ from, to, run, format }) {
+  return <>{format(useRolledNumber(from, to, run))}</>;
+}
+
+/**
+ * The cheer and the roast. The space for the lines is held from the start
+ * so nothing below jumps when they pop in.
+ */
+export function RoundCommentary({ lines, show }) {
+  if (!lines.length) return null;
+  return (
+    <div className="mb-3 px-1 space-y-1" aria-live="polite">
+      {lines.map((l, i) => (
+        <p
+          key={i}
+          style={{ animationDelay: `${i * 420}ms` }}
+          className={`round-quip flex items-center gap-2 min-h-[26px] ${show ? 'round-quip-in' : 'opacity-0'}`}
+        >
+          <span className="text-[20px] leading-none shrink-0" aria-hidden="true">{l.emoji}</span>
+          <span className="font-display font-semibold text-[17px] leading-tight text-cream-bright">
+            {l.segs.map((s, j) =>
+              s.name ? (
+                <b key={j} className={`font-sans font-semibold text-[0.82em] ${l.tone === 'down' ? 'text-[#fda4af]' : 'text-[#e2c579]'}`}>{s.t}</b>
+              ) : (
+                // Numerals are never serif (kit rule): digits go sans.
+                <span key={j}>
+                  {s.t.split(/([+\u2212]?\d+)/).map((piece, k) =>
+                    /\d/.test(piece) ? <span key={k} className="font-sans font-semibold text-[0.8em] tabular-nums">{piece}</span> : piece,
+                  )}
+                </span>
+              ),
+            )}
+          </span>
+        </p>
+      ))}
+    </div>
+  );
+}

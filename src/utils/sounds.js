@@ -1,9 +1,21 @@
 import { getAudioContext } from './audioKeepAlive';
 
-export function playBooSound() {
+// Every sound goes through here as a voice (ctx, dest, t), so a test
+// recording can collect them (window.__wizardSoundLog, defined only by the
+// recording script) and rebuild the soundtrack offline, the same way the
+// multiplayer app does.
+function run(voice) {
+  globalThis.__wizardSoundLog?.push({ at: performance.now(), voice });
   try {
     const ctx = getAudioContext();
-    if (!ctx) return;
+    if (ctx) voice(ctx, ctx.destination, ctx.currentTime);
+  } catch {
+    // Audio not supported
+  }
+}
+
+export function playBooSound() {
+  run((ctx, dest, t) => {
     const duration = 0.8;
 
     const osc1 = ctx.createOscillator();
@@ -20,38 +32,31 @@ export function playBooSound() {
     distortion.curve = curve;
 
     osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(180, ctx.currentTime);
-    osc1.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + duration);
+    osc1.frequency.setValueAtTime(180, t);
+    osc1.frequency.exponentialRampToValueAtTime(80, t + duration);
 
     osc2.type = 'square';
-    osc2.frequency.setValueAtTime(120, ctx.currentTime);
-    osc2.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + duration);
+    osc2.frequency.setValueAtTime(120, t);
+    osc2.frequency.exponentialRampToValueAtTime(60, t + duration);
 
-    gain.gain.setValueAtTime(0.6, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.8, ctx.currentTime + 0.1);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(0.6, t);
+    gain.gain.linearRampToValueAtTime(0.8, t + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
 
     osc1.connect(distortion);
     osc2.connect(distortion);
     distortion.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
 
-    osc1.start(ctx.currentTime);
-    osc2.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + duration);
-    osc2.stop(ctx.currentTime + duration);
-
-  } catch {
-    // Audio not supported
-  }
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + duration);
+    osc2.stop(t + duration);
+  });
 }
 
 export function playSparkleSound() {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
+  run((ctx, dest, now) => {
     // Magical ascending chime — 4 quick notes with shimmer
     const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
     const noteSpacing = 0.12;
@@ -68,7 +73,7 @@ export function playSparkleSound() {
       gain.gain.exponentialRampToValueAtTime(0.01, now + i * noteSpacing + 0.5);
 
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
 
       osc.start(now + i * noteSpacing);
       osc.stop(now + i * noteSpacing + 0.5);
@@ -84,13 +89,10 @@ export function playSparkleSound() {
     shimmerGain.gain.linearRampToValueAtTime(0.15, now + 0.5);
     shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
     shimmer.connect(shimmerGain);
-    shimmerGain.connect(ctx.destination);
+    shimmerGain.connect(dest);
     shimmer.start(now + 0.3);
     shimmer.stop(now + 1.5);
-
-  } catch {
-    // Audio not supported
-  }
+  });
 }
 
 // ─── Bid / trick chip taps ───
@@ -221,37 +223,17 @@ function confirmBidsVoice(ctx, dest, t) {
 }
 
 export function playStartRoundSound() {
-  try {
-    const ctx = getAudioContext();
-    if (ctx) startRoundVoice(ctx, ctx.destination, ctx.currentTime);
-  } catch {
-    // Audio not supported
-  }
+  run((ctx, dest, t) => startRoundVoice(ctx, dest, t));
 }
 
 export function playConfirmBidsSound() {
-  try {
-    const ctx = getAudioContext();
-    if (ctx) confirmBidsVoice(ctx, ctx.destination, ctx.currentTime);
-  } catch {
-    // Audio not supported
-  }
+  run((ctx, dest, t) => confirmBidsVoice(ctx, dest, t));
 }
 
 export function playBidSound(n) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx) bidVoice(ctx, ctx.destination, ctx.currentTime, n);
-  } catch {
-    // Audio not supported
-  }
+  run((ctx, dest, t) => bidVoice(ctx, dest, t, n));
 }
 
 export function playTrickSound(n) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx) trickVoice(ctx, ctx.destination, ctx.currentTime, n);
-  } catch {
-    // Audio not supported
-  }
+  run((ctx, dest, t) => trickVoice(ctx, dest, t, n));
 }

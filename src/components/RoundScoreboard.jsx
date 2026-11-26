@@ -4,6 +4,7 @@ import LastRoundToggle from './LastRoundToggle';
 import { rankByTotal, roundCommentary } from '../utils/roundCommentary';
 import { useStandingsReveal } from '../utils/standingsReveal';
 import { MoveBadge, RolledNumber, RoundCommentary } from './RoundReveal';
+import { playQuip, playRevealMove, playRevealPoints } from '../utils/revealSounds';
 
 // Round results + next-round setup on ONE screen (merged the old
 // "Scored" and "Pre-round" screens, 2026-09-02). Top to bottom:
@@ -87,6 +88,12 @@ export default function RoundScoreboard({
     `${players.map((p) => p.id).sort().join('')}:${round.roundNumber}`,
     beforeStandings.map((p) => p.id),
     afterStandings.map((p) => p.id),
+    (st, rowsMove) => {
+      if (st === 1) playRevealPoints();
+      if (st === 2 && rowsMove) playRevealMove();
+      // One sound per line, in step with the lines' own stagger.
+      if (st === 3) commentary.forEach((l, i) => window.setTimeout(() => playQuip(l.tone), i * 420));
+    },
   );
   const byId = Object.fromEntries(standings.map((p) => [p.id, p]));
   const shownStandings = order.map((id) => byId[id]).filter(Boolean);
